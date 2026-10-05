@@ -106,6 +106,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_riverpod: ^3.3.2
   go_router: ^17.5.0
 
@@ -113,9 +116,33 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+
+flutter:
+  generate: true
 ```
 
-### 3. Implement MVVM Layers & Package Router Config
+#### Feature Package Localization (`features/home/l10n.yaml`):
+```yaml
+arb-dir: lib/l10n
+template-arb-file: home_en.arb
+output-localization-file: home_localizations.dart
+output-class: HomeLocalizations
+output-dir: lib/l10n
+```
+
+#### Feature Translation Files (`features/home/lib/l10n/home_en.arb`):
+```json
+{
+  "@@locale": "en",
+  "homeTitle": "Home",
+  "counterLabel": "Current Counter Value:",
+  "increment": "Increment",
+  "decrement": "Decrement",
+  "reset": "Reset"
+}
+```
+
+### 3. Implement MVVM Layers, Router & Package Localizations
 
 #### A. Package Route Config (`features/home/lib/presentation/router/router.config.dart`):
 ```dart
@@ -166,11 +193,12 @@ final counterViewModelProvider =
 );
 ```
 
-#### D. View (`features/home/lib/presentation/views/home_view.dart`):
+#### D. View Consuming Package Localizations (`features/home/lib/presentation/views/home_view.dart`):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/home_localizations.dart';
 import '../viewmodel/counter_view_model.dart';
 
 class HomeView extends ConsumerWidget {
@@ -179,10 +207,11 @@ class HomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(counterViewModelProvider);
+    final l10n = HomeLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(l10n?.homeTitle ?? 'Home'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -194,7 +223,7 @@ class HomeView extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Current Counter Value:'),
+            Text(l10n?.counterLabel ?? 'Current Counter Value:'),
             Text('${state.count}', style: Theme.of(context).textTheme.displayMedium),
             const SizedBox(height: 16),
             Row(
@@ -202,12 +231,12 @@ class HomeView extends ConsumerWidget {
               children: [
                 FilledButton.tonal(
                   onPressed: () => ref.read(counterViewModelProvider.notifier).decrement(),
-                  child: const Text('-'),
+                  child: Text(l10n?.decrement ?? '-'),
                 ),
                 const SizedBox(width: 16),
                 FilledButton(
                   onPressed: () => ref.read(counterViewModelProvider.notifier).increment(),
-                  child: const Text('+'),
+                  child: Text(l10n?.increment ?? '+'),
                 ),
               ],
             ),
@@ -216,6 +245,7 @@ class HomeView extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => ref.read(counterViewModelProvider.notifier).reset(),
+        tooltip: l10n?.reset ?? 'Reset',
         child: const Icon(Icons.refresh),
       ),
     );
@@ -225,48 +255,40 @@ class HomeView extends ConsumerWidget {
 
 #### E. Barrel Export (`features/home/lib/home_feature.dart`):
 ```dart
+export 'l10n/home_localizations.dart';
 export 'presentation/router/router.config.dart';
 export 'presentation/state/counter_state.dart';
 export 'presentation/viewmodel/counter_view_model.dart';
 export 'presentation/views/home_view.dart';
 ```
 
-### 4. Configure Localization (l10n)
+### 4. Configure Package-Level & Host Localization (l10n)
 
-Add localization dependencies and enable code generation:
+Each package compiles its own localizations locally:
 ```bash
-flutter pub add flutter_localizations --sdk=flutter
-flutter pub add intl:any
+(cd features/home && flutter gen-l10n)
+(cd features/settings && flutter gen-l10n)
 ```
 
-#### `l10n.yaml`:
+The host app can also maintain root-level localization (e.g. `appTitle`) in `l10n.yaml`:
 ```yaml
 arb-dir: lib/l10n
 template-arb-file: app_en.arb
 output-localization-file: app_localizations.dart
 ```
 
-#### Translation Files (`lib/l10n/app_en.arb` & `lib/l10n/app_es.arb`):
-```json
-{
-  "@@locale": "en",
-  "appTitle": "Flutter Starter App",
-  "homeTitle": "Home",
-  "settingsTitle": "Settings",
-  "counterLabel": "Current Counter Value:"
-}
-```
-
-Run `flutter gen-l10n` to compile localization classes.
+Run `flutter gen-l10n` in the host app to compile root localizations.
 
 ### 5. Wire Feature Packages in the Host App
 Add dependencies and local path packages to the host app:
 ```bash
 flutter pub add flutter_riverpod go_router
+flutter pub add flutter_localizations --sdk=flutter
+flutter pub add intl:any
 flutter pub add 'home_feature:{"path":"features/home"}' 'settings_feature:{"path":"features/settings"}'
 ```
 
-### 6. Configure Core Foundation (Theme & Host Router)
+### 6. Configure Core Foundation (Theme, Host Router & Aggregate Localizations)
 
 #### Host Router Mounting Feature `router.config.dart` (`lib/core/router/app_router.dart`):
 ```dart
@@ -290,10 +312,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 ```
 
-#### `lib/app.dart` (Configured with l10n and Router):
+#### `lib/app.dart` (Configured with Aggregated Feature Localizations):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_feature/home_feature.dart';
 import 'package:settings_feature/settings_feature.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
@@ -315,7 +338,11 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeState.mode,
       routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
+        HomeLocalizations.delegate,
+        SettingsLocalizations.delegate,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }

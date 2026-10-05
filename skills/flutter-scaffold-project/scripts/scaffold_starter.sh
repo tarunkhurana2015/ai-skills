@@ -111,8 +111,8 @@ if [[ "$PLATFORMS" == *"macos"* ]] && [ -d "macos" ]; then
 fi
 
 echo "==> Scaffolding package-based features with MVVM, router.config, docs, and tests..."
-mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
+mkdir -p features/home/{docs,lib/l10n,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{docs,lib/l10n,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
 
 # -----------------------------------------------------------------------------
 # 1. Feature Package: home_feature
@@ -132,6 +132,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_riverpod: ^3.3.2
   go_router: ^17.5.0
 
@@ -139,6 +142,42 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+
+flutter:
+  generate: true
+EOF
+
+# features/home/l10n.yaml
+cat << 'EOF' > features/home/l10n.yaml
+arb-dir: lib/l10n
+template-arb-file: home_en.arb
+output-localization-file: home_localizations.dart
+output-class: HomeLocalizations
+output-dir: lib/l10n
+EOF
+
+# features/home/lib/l10n/home_en.arb
+cat << 'EOF' > features/home/lib/l10n/home_en.arb
+{
+  "@@locale": "en",
+  "homeTitle": "Home",
+  "counterLabel": "Current Counter Value:",
+  "increment": "Increment",
+  "decrement": "Decrement",
+  "reset": "Reset"
+}
+EOF
+
+# features/home/lib/l10n/home_es.arb
+cat << 'EOF' > features/home/lib/l10n/home_es.arb
+{
+  "@@locale": "es",
+  "homeTitle": "Inicio",
+  "counterLabel": "Valor Actual del Contador:",
+  "increment": "Incrementar",
+  "decrement": "Disminuir",
+  "reset": "Restablecer"
+}
 EOF
 
 # features/home/docs/README.md
@@ -146,9 +185,10 @@ cat << 'EOF' > features/home/docs/README.md
 # Home Feature Package (`home_feature`)
 
 ## Overview
-Self-contained feature package managing the counter domain and landing experience following the Model-View-ViewModel (MVVM) architecture.
+Self-contained feature package managing the counter domain, landing experience, and localized strings following the Model-View-ViewModel (MVVM) architecture.
 
 ## Architecture
+- **Localization**: `lib/l10n/home_localizations.dart`
 - **Router**: `lib/presentation/router/router.config.dart`
 - **State**: `lib/presentation/state/counter_state.dart`
 - **ViewModel**: `lib/presentation/viewmodel/counter_view_model.dart`
@@ -177,6 +217,7 @@ EOF
 
 # features/home/lib/home_feature.dart (Barrel file)
 cat << 'EOF' > features/home/lib/home_feature.dart
+export 'l10n/home_localizations.dart';
 export 'presentation/router/router.config.dart';
 export 'presentation/state/counter_state.dart';
 export 'presentation/viewmodel/counter_view_model.dart';
@@ -229,6 +270,7 @@ cat << 'EOF' > features/home/lib/presentation/views/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../l10n/home_localizations.dart';
 import '../viewmodel/counter_view_model.dart';
 
 class HomeView extends ConsumerWidget {
@@ -237,10 +279,11 @@ class HomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(counterViewModelProvider);
+    final l10n = HomeLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(l10n?.homeTitle ?? 'Home'),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -253,9 +296,9 @@ class HomeView extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              'Current Counter Value:',
-              style: TextStyle(fontSize: 18),
+            Text(
+              l10n?.counterLabel ?? 'Current Counter Value:',
+              style: const TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 12),
             Text(
@@ -272,14 +315,14 @@ class HomeView extends ConsumerWidget {
                   onPressed: () =>
                       ref.read(counterViewModelProvider.notifier).decrement(),
                   icon: const Icon(Icons.remove),
-                  label: const Text('Decrement'),
+                  label: Text(l10n?.decrement ?? 'Decrement'),
                 ),
                 const SizedBox(width: 16),
                 FilledButton.icon(
                   onPressed: () =>
                       ref.read(counterViewModelProvider.notifier).increment(),
                   icon: const Icon(Icons.add),
-                  label: const Text('Increment'),
+                  label: Text(l10n?.increment ?? 'Increment'),
                 ),
               ],
             ),
@@ -287,7 +330,7 @@ class HomeView extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        tooltip: 'Reset',
+        tooltip: l10n?.reset ?? 'Reset',
         onPressed: () =>
             ref.read(counterViewModelProvider.notifier).reset(),
         child: const Icon(Icons.refresh),
@@ -358,6 +401,9 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
   flutter_riverpod: ^3.3.2
   go_router: ^17.5.0
 
@@ -365,6 +411,42 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+
+flutter:
+  generate: true
+EOF
+
+# features/settings/l10n.yaml
+cat << 'EOF' > features/settings/l10n.yaml
+arb-dir: lib/l10n
+template-arb-file: settings_en.arb
+output-localization-file: settings_localizations.dart
+output-class: SettingsLocalizations
+output-dir: lib/l10n
+EOF
+
+# features/settings/lib/l10n/settings_en.arb
+cat << 'EOF' > features/settings/lib/l10n/settings_en.arb
+{
+  "@@locale": "en",
+  "settingsTitle": "Settings",
+  "appearance": "Appearance",
+  "systemTheme": "System",
+  "lightTheme": "Light",
+  "darkTheme": "Dark"
+}
+EOF
+
+# features/settings/lib/l10n/settings_es.arb
+cat << 'EOF' > features/settings/lib/l10n/settings_es.arb
+{
+  "@@locale": "es",
+  "settingsTitle": "Ajustes",
+  "appearance": "Apariencia",
+  "systemTheme": "Sistema",
+  "lightTheme": "Claro",
+  "darkTheme": "Oscuro"
+}
 EOF
 
 # features/settings/docs/README.md
@@ -372,9 +454,10 @@ cat << 'EOF' > features/settings/docs/README.md
 # Settings Feature Package (`settings_feature`)
 
 ## Overview
-Self-contained feature package handling application-wide settings and Material 3 theme modes following the Model-View-ViewModel (MVVM) architecture.
+Self-contained feature package handling application-wide settings, Material 3 theme modes, and localized strings following the Model-View-ViewModel (MVVM) architecture.
 
 ## Architecture
+- **Localization**: `lib/l10n/settings_localizations.dart`
 - **Router**: `lib/presentation/router/router.config.dart`
 - **State**: `lib/presentation/state/theme_state.dart`
 - **ViewModel**: `lib/presentation/viewmodel/theme_view_model.dart`
@@ -403,6 +486,7 @@ EOF
 
 # features/settings/lib/settings_feature.dart (Barrel file)
 cat << 'EOF' > features/settings/lib/settings_feature.dart
+export 'l10n/settings_localizations.dart';
 export 'presentation/router/router.config.dart';
 export 'presentation/state/theme_state.dart';
 export 'presentation/viewmodel/theme_view_model.dart';
@@ -454,6 +538,7 @@ EOF
 cat << 'EOF' > features/settings/lib/presentation/views/settings_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../l10n/settings_localizations.dart';
 import '../viewmodel/theme_view_model.dart';
 
 class SettingsView extends ConsumerWidget {
@@ -462,35 +547,36 @@ class SettingsView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeState = ref.watch(themeViewModelProvider);
+    final l10n = SettingsLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(l10n?.settingsTitle ?? 'Settings')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Appearance',
+              l10n?.appearance ?? 'Appearance',
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 12),
             SegmentedButton<ThemeMode>(
-              segments: const [
+              segments: [
                 ButtonSegment<ThemeMode>(
                   value: ThemeMode.system,
-                  label: Text('System'),
-                  icon: Icon(Icons.brightness_auto),
+                  label: Text(l10n?.systemTheme ?? 'System'),
+                  icon: const Icon(Icons.brightness_auto),
                 ),
                 ButtonSegment<ThemeMode>(
                   value: ThemeMode.light,
-                  label: Text('Light'),
-                  icon: Icon(Icons.light_mode),
+                  label: Text(l10n?.lightTheme ?? 'Light'),
+                  icon: const Icon(Icons.light_mode),
                 ),
                 ButtonSegment<ThemeMode>(
                   value: ThemeMode.dark,
-                  label: Text('Dark'),
-                  icon: Icon(Icons.dark_mode),
+                  label: Text(l10n?.darkTheme ?? 'Dark'),
+                  icon: const Icon(Icons.dark_mode),
                 ),
               ],
               selected: {themeState.mode},
@@ -536,7 +622,7 @@ void main() {
 EOF
 
 # -----------------------------------------------------------------------------
-# 3. Host Application Setup & Wiring (l10n, Router, MVVM)
+# 3. Host Application Setup & Wiring (Package Localizations, Router, MVVM)
 # -----------------------------------------------------------------------------
 
 echo "==> Wiring host app dependencies, l10n, and local path packages..."
@@ -552,7 +638,7 @@ if ! grep -q "generate: true" pubspec.yaml; then
 ' pubspec.yaml
 fi
 
-# Create l10n.yaml
+# Create l10n.yaml for host root app
 cat << 'EOF' > l10n.yaml
 arb-dir: lib/l10n
 template-arb-file: app_en.arb
@@ -565,17 +651,7 @@ mkdir -p lib/l10n
 cat << 'EOF' > lib/l10n/app_en.arb
 {
   "@@locale": "en",
-  "appTitle": "Flutter Starter App",
-  "homeTitle": "Home",
-  "settingsTitle": "Settings",
-  "counterLabel": "Current Counter Value:",
-  "increment": "Increment",
-  "decrement": "Decrement",
-  "reset": "Reset",
-  "appearance": "Appearance",
-  "systemTheme": "System",
-  "lightTheme": "Light",
-  "darkTheme": "Dark"
+  "appTitle": "Flutter Starter App"
 }
 EOF
 
@@ -583,23 +659,13 @@ EOF
 cat << 'EOF' > lib/l10n/app_es.arb
 {
   "@@locale": "es",
-  "appTitle": "Aplicación Flutter",
-  "homeTitle": "Inicio",
-  "settingsTitle": "Ajustes",
-  "counterLabel": "Valor Actual del Contador:",
-  "increment": "Incrementar",
-  "decrement": "Disminuir",
-  "reset": "Restablecer",
-  "appearance": "Apariencia",
-  "systemTheme": "Sistema",
-  "lightTheme": "Claro",
-  "darkTheme": "Oscuro"
+  "appTitle": "Aplicación Flutter"
 }
 EOF
 
-echo "==> Resolving packages and generating localizations..."
-(cd features/home && $FLUTTER_CMD pub get)
-(cd features/settings && $FLUTTER_CMD pub get)
+echo "==> Resolving packages and generating package & root localizations..."
+(cd features/home && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
+(cd features/settings && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
 $FLUTTER_CMD pub get
 $FLUTTER_CMD gen-l10n
 
@@ -664,10 +730,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 EOF
 
-# lib/app.dart (Includes localizations delegates and router)
+# lib/app.dart (Includes package localizations delegates and router)
 cat << 'EOF' > lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_feature/home_feature.dart';
 import 'package:settings_feature/settings_feature.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
@@ -689,7 +756,11 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeState.mode,
       routerConfig: router,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
+        HomeLocalizations.delegate,
+        SettingsLocalizations.delegate,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }

@@ -1,6 +1,6 @@
 # Package-Based Feature-First Architecture Guide (MVVM)
 
-In a **Package-Based Feature-First** architecture, features are encapsulated as independent, self-contained Flutter packages inside the `features/` directory. Each feature package contains its own `pubspec.yaml`, dependencies, isolated test suites, package-level documentation, and route definitions (`router.config.dart`), while adhering to the **Model-View-ViewModel (MVVM)** pattern within its presentation layer.
+In a **Package-Based Feature-First** architecture, features are encapsulated as independent, self-contained Flutter packages inside the `features/` directory. Each feature package contains its own `pubspec.yaml`, dependencies, isolated test suites, package-level documentation, route definitions (`router.config.dart`), and **package-level localization (`l10n.yaml` and `.arb` translation files)**, while adhering to the **Model-View-ViewModel (MVVM)** pattern within its presentation layer.
 
 ---
 
@@ -9,14 +9,14 @@ In a **Package-Based Feature-First** architecture, features are encapsulated as 
 ```text
 my_flutter_app/
 ├── pubspec.yaml                     # App root dependencies & local path packages
-├── l10n.yaml                        # Flutter localization configuration
+├── l10n.yaml                        # Root localization configuration (global app strings)
 ├── lib/
 │   ├── main.dart                    # App entry point, ProviderScope initialization
-│   ├── app.dart                     # MaterialApp.router configuration, theme & l10n binding
-│   ├── l10n/                        # Localization resource files (.arb) & generated code
-│   │   ├── app_en.arb               # English translations
-│   │   ├── app_es.arb               # Spanish translations
-│   │   └── app_localizations.dart   # Generated localization delegates
+│   ├── app.dart                     # MaterialApp.router aggregating feature localizationsDelegates
+│   ├── l10n/                        # Global/shell localization resource files (.arb)
+│   │   ├── app_en.arb               # Root English translations
+│   │   ├── app_es.arb               # Root Spanish translations
+│   │   └── app_localizations.dart   # Generated root localization delegates
 │   └── core/                        # Global foundational code shared by the host app
 │       ├── constants/               # Global strings, asset definitions
 │       ├── router/                  # Central GoRouter mounting feature router.config routes
@@ -25,14 +25,19 @@ my_flutter_app/
 │
 └── features/                        # Package-based feature modules
     ├── home/                        # Feature Package (home_feature)
-    │   ├── pubspec.yaml             # Isolated dependencies for home feature
+    │   ├── pubspec.yaml             # Isolated dependencies: flutter_localizations, generate: true
+    │   ├── l10n.yaml                # Package-level l10n config (output-class: HomeLocalizations)
     │   ├── docs/                    # Package-level documentation & API specs
     │   │   └── README.md
     │   ├── test/                    # Isolated package test suite
     │   │   └── viewmodel/           # ViewModel unit tests
     │   │       └── counter_view_model_test.dart
     │   └── lib/
-    │       ├── home_feature.dart    # Barrel export file
+    │       ├── home_feature.dart    # Barrel export (exports l10n, router, state, viewmodel, views)
+    │       ├── l10n/                # Package localization resources & generated classes
+    │       │   ├── home_en.arb      # Home English translations
+    │       │   ├── home_es.arb      # Home Spanish translations
+    │       │   └── home_localizations.dart
     │       ├── domain/              # Model: business rules, entities
     │       │   └── home_item.dart
     │       ├── data/                # Model: repositories, data sources
@@ -45,19 +50,24 @@ my_flutter_app/
     │           │   └── counter_state.dart
     │           ├── viewmodel/       # ViewModels (Riverpod Notifier managing UI state)
     │           │   └── counter_view_model.dart
-    │           └── views/           # Views: UI widgets and screens
+    │           └── views/           # Views: UI widgets consuming HomeLocalizations.of(context)
     │               ├── home_view.dart
     │               └── widgets/
     │
     └── settings/                    # Feature Package (settings_feature)
-        ├── pubspec.yaml
+        ├── pubspec.yaml             # Isolated dependencies: flutter_localizations, generate: true
+        ├── l10n.yaml                # Package-level l10n config (output-class: SettingsLocalizations)
         ├── docs/                    # Package-level documentation & API specs
         │   └── README.md
         ├── test/                    # Isolated package test suite
         │   └── viewmodel/
         │       └── theme_view_model_test.dart
         └── lib/
-            ├── settings_feature.dart
+            ├── settings_feature.dart # Barrel export file
+            ├── l10n/                # Package localization resources & generated classes
+            │   ├── settings_en.arb  # Settings English translations
+            │   ├── settings_es.arb  # Settings Spanish translations
+            │   └── settings_localizations.dart
             └── presentation/        # MVVM Presentation Layer
                 ├── router/
                 │   └── router.config.dart # GoRouter RouteBase definition
@@ -118,57 +128,126 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 ---
 
-## Localization with `l10n`
+## Package-Level Localization with `l10n`
 
-The application uses Flutter's official localization system based on `.arb` (Application Resource Bundle) files:
+Defining localization at the feature package level ensures that each module is fully self-contained, portable, and independently testable without depending on host application strings.
 
-### 1. `l10n.yaml` in Project Root
+### 1. Feature Package Configuration (`features/home/`)
+
+#### A. Enable Code Generation in `features/home/pubspec.yaml`
 ```yaml
-arb-dir: lib/l10n
-template-arb-file: app_en.arb
-output-localization-file: app_localizations.dart
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
+flutter:
+  generate: true
 ```
 
-### 2. ARB Translation Files (`lib/l10n/`)
-- `app_en.arb` (English):
+#### B. Configure Package `l10n.yaml` (`features/home/l10n.yaml`)
+Specify a custom `output-class` and set `output-dir` directly inside the package:
+```yaml
+arb-dir: lib/l10n
+template-arb-file: home_en.arb
+output-localization-file: home_localizations.dart
+output-class: HomeLocalizations
+output-dir: lib/l10n
+```
+
+#### C. Feature Translation Files (`features/home/lib/l10n/`)
+- `home_en.arb`:
   ```json
   {
     "@@locale": "en",
-    "appTitle": "Flutter Starter App",
     "homeTitle": "Home",
-    "settingsTitle": "Settings",
-    "counterValue": "Current Counter Value:"
+    "counterLabel": "Current Counter Value:",
+    "increment": "Increment",
+    "decrement": "Decrement",
+    "reset": "Reset"
   }
   ```
-- `app_es.arb` (Spanish):
+- `home_es.arb`:
   ```json
   {
     "@@locale": "es",
-    "appTitle": "Aplicación Flutter",
     "homeTitle": "Inicio",
-    "settingsTitle": "Ajustes",
-    "counterValue": "Valor Actual del Contador:"
+    "counterLabel": "Valor Actual del Contador:",
+    "increment": "Incrementar",
+    "decrement": "Disminuir",
+    "reset": "Restablecer"
   }
   ```
 
-### 3. Binding to `MaterialApp.router` (`lib/app.dart`)
+#### D. Export from Package Barrel (`features/home/lib/home_feature.dart`)
 ```dart
-import 'l10n/app_localizations.dart';
-
-return MaterialApp.router(
-  title: AppConstants.appTitle,
-  localizationsDelegates: AppLocalizations.localizationsDelegates,
-  supportedLocales: AppLocalizations.supportedLocales,
-  theme: AppTheme.lightTheme,
-  darkTheme: AppTheme.darkTheme,
-  routerConfig: router,
-);
+export 'l10n/home_localizations.dart';
+export 'presentation/router/router.config.dart';
+export 'presentation/state/counter_state.dart';
+export 'presentation/viewmodel/counter_view_model.dart';
+export 'presentation/views/home_view.dart';
 ```
 
-### 4. Consuming in Views
+#### E. Consuming in Feature Views (`features/home/lib/presentation/views/home_view.dart`)
+The view directly consumes its own package localization class:
 ```dart
-final l10n = AppLocalizations.of(context)!;
-Text(l10n.counterValue);
+import '../../l10n/home_localizations.dart';
+
+Widget build(BuildContext context, WidgetRef ref) {
+  final l10n = HomeLocalizations.of(context);
+
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(l10n?.homeTitle ?? 'Home'),
+    ),
+    body: Text(l10n?.counterLabel ?? 'Current Counter Value:'),
+  );
+}
+```
+
+---
+
+### 2. Aggregating Localizations in the Host Application
+
+The host app imports feature packages and includes each feature's `delegate` in the `localizationsDelegates` list:
+
+```dart
+// lib/app.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_feature/home_feature.dart';
+import 'package:settings_feature/settings_feature.dart';
+import 'core/constants/app_constants.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
+
+class MyApp extends ConsumerWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final router = ref.watch(routerProvider);
+    final themeState = ref.watch(themeViewModelProvider);
+
+    return MaterialApp.router(
+      title: AppConstants.appTitle,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeState.mode,
+      routerConfig: router,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
+        HomeLocalizations.delegate,
+        SettingsLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+    );
+  }
+}
 ```
 
 ---
@@ -180,4 +259,13 @@ Within each feature package's `presentation/` folder, code is strictly divided i
 1. **`router/`**: Houses `router.config.dart` defining the package's routes and URL paths.
 2. **`state/`**: Defines the data required by the View as immutable Dart classes.
 3. **`viewmodel/`**: Implemented as Riverpod `Notifier<State>`, handling UI logic, mutations, and actions.
-4. **`views/`**: Passive UI components and screen widgets (`ConsumerWidget`) observing state and dispatching actions.
+4. **`views/`**: Passive UI components and screen widgets (`ConsumerWidget`) observing state, consuming package localizations, and dispatching actions.
+
+---
+
+## Benefits of Package-Level Architecture
+
+1. **Autonomous Ownership**: Each feature package owns its UI markup, business logic, routes, and translations.
+2. **Eliminates Merge Conflicts**: Multiple teams can add or modify localized strings without conflicting in a single giant root ARB file.
+3. **Clean Decoupling**: Deleting or replacing a feature completely purges its routes and localization resources cleanly.
+4. **Independent Testing**: Feature packages can be tested in isolation (`cd features/home && flutter test`).
