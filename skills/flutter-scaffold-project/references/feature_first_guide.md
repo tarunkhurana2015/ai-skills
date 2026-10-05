@@ -1,70 +1,129 @@
-# Feature-First Architecture Guide
+# Package-Based Feature-First Architecture Guide (MVVM)
 
-In a **Feature-First** architecture, code is grouped by user-facing capabilities or domain features rather than technical layers. This scales cleanly as applications grow from simple MVPs into large production codebases.
+In a **Package-Based Feature-First** architecture, features are encapsulated as independent, self-contained Flutter packages inside the `features/` directory. Each feature package contains its own `pubspec.yaml`, dependencies, and isolated test suites, while adhering to the **Model-View-ViewModel (MVVM)** pattern within its presentation layer.
 
 ---
 
 ## Directory Layout
 
 ```text
-lib/
-├── main.dart                       # App entry point, ProviderScope initialization
-├── app.dart                        # MaterialApp.router configuration & theme binding
+my_flutter_app/
+├── pubspec.yaml                     # App root dependencies & local path packages
+├── lib/
+│   ├── main.dart                    # App entry point, ProviderScope initialization
+│   ├── app.dart                     # MaterialApp.router configuration & theme binding
+│   └── core/                        # Global foundational code shared by the host app
+│       ├── constants/               # Global strings, asset definitions
+│       ├── router/                  # Central GoRouter tree wiring feature views
+│       ├── theme/                   # Material 3 light/dark themes & design tokens
+│       └── utils/                   # Shared utilities & extensions
 │
-├── core/                           # Code shared across all features
-│   ├── constants/                  # App-wide strings, asset paths, API constants
-│   ├── network/                    # HTTP client, interceptors, API error handling
-│   ├── router/                     # GoRouter configuration & route paths
-│   ├── theme/                      # Material 3 light/dark ColorSchemes & TextThemes
-│   └── utils/                      # Extensions, date formatters, helpers
-│
-└── features/                       # Self-contained domain features
-    ├── home/                       # Example feature
-    │   ├── data/                   # Repositories, API data sources, DTOs
-    │   │   ├── home_repository.dart
-    │   │   └── home_api_client.dart
-    │   ├── domain/                 # Pure Dart models, entities, value objects
-    │   │   └── home_item.dart
-    │   └── presentation/           # UI layer: screens, widgets, Riverpod providers
-    │       ├── controllers/        # Notifiers / AsyncNotifiers managing feature state
-    │       │   └── home_controller.dart
-    │       ├── screens/            # Full-page route destinations
-    │       │   └── home_screen.dart
-    │       └── widgets/            # Reusable components private to this feature
-    │           └── home_item_card.dart
+└── features/                        # Package-based feature modules
+    ├── home/                        # Feature Package (home_feature)
+    │   ├── pubspec.yaml             # Isolated dependencies for home feature
+    │   └── lib/
+    │       ├── home_feature.dart    # Barrel export file
+    │       ├── domain/              # Model: business rules, entities
+    │       │   └── home_item.dart
+    │       ├── data/                # Model: repositories, data sources
+    │       │   ├── home_repository.dart
+    │       │   └── home_api_client.dart
+    │       └── presentation/        # MVVM Presentation Layer
+    │           ├── state/           # UI State models (immutable data classes)
+    │           │   └── counter_state.dart
+    │           ├── viewmodel/       # ViewModels (Riverpod Notifier managing UI state)
+    │           │   └── counter_view_model.dart
+    │           └── views/           # Views: UI widgets and screens
+    │               ├── home_view.dart
+    │               └── widgets/
     │
-    └── settings/                   # Another independent feature
-        ├── domain/
-        └── presentation/
+    └── settings/                    # Feature Package (settings_feature)
+        ├── pubspec.yaml
+        └── lib/
+            ├── settings_feature.dart
+            └── presentation/        # MVVM Presentation Layer
+                ├── state/
+                │   └── theme_state.dart
+                ├── viewmodel/
+                │   └── theme_view_model.dart
+                └── views/
+                    └── settings_view.dart
 ```
 
 ---
 
-## Separation of Concerns
+## Package-Based Feature Setup
 
-### 1. Presentation Layer (`features/<feature>/presentation/`)
-- **Screens**: Top-level widgets linked directly to `GoRoute` entries.
-- **Widgets**: Sub-components used within the feature's screens.
-- **Controllers / Providers**: Riverpod `Notifier` or `AsyncNotifier` subclasses that hold UI state and expose methods triggered by user events (button taps, form submissions).
+Each feature is a first-class Dart/Flutter package inside `features/<feature_name>/` with its own `pubspec.yaml`:
 
-### 2. Domain Layer (`features/<feature>/domain/`)
-- Contains pure Dart classes representing domain models and business rules.
-- **No Flutter UI imports** (`dart:ui` or `package:flutter/...`) should exist in domain models.
-- Immutable data structures with copyWith/JSON serialization where appropriate.
+### `features/home/pubspec.yaml`
+```yaml
+name: home_feature
+description: Home feature package
+version: 1.0.0
+publish_to: 'none'
 
-### 3. Data Layer (`features/<feature>/data/`)
-- **Data Sources**: Make raw HTTP/database calls.
-- **Repositories**: Abstract the data source and map raw JSON or database records to domain models.
-- Providers for repositories are exposed here so presentation controllers can consume them via `ref.watch()`.
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.41.0"
 
-### 4. Core Layer (`core/`)
-- Contains global singletons, app configurations, router setup, and shared utilities.
-- Features may depend on `core/`, but `core/` should **never** import from `features/`.
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+```
+
+### Wiring Feature Packages in the Host App (`pubspec.yaml`)
+The root application imports feature packages via local path dependencies:
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.5.0
+
+  # Local Feature Packages
+  home_feature:
+    path: features/home
+  settings_feature:
+    path: features/settings
+```
 
 ---
 
-## Communication Between Features
-When one feature needs data or state from another:
-1. Avoid tight coupling between feature presentation widgets.
-2. Expose the data through a Riverpod provider in the feature's `data/` or `domain/` layer.
-3. The dependent feature watches only that provider.
+## Model-View-ViewModel (MVVM) in the Presentation Layer
+
+Within each feature package's `presentation/` folder, code is strictly divided into three subdirectories:
+
+### 1. `state/` (UI State)
+- Defines the data required by the View as immutable Dart classes.
+- Includes `copyWith`, default constructor values, and equality.
+- Example: `CounterState`, `ThemeState`.
+
+### 2. `viewmodel/` (ViewModel)
+- Manages UI logic, interacts with repositories (Model), and mutates the UI State.
+- Implemented as a Riverpod `Notifier<State>` or `AsyncNotifier<State>`.
+- Exposes business methods (e.g., `increment()`, `setThemeMode()`) called by the View.
+- Exposes a top-level provider (e.g., `counterViewModelProvider`).
+
+### 3. `views/` (View)
+- Passive UI components and screen widgets (`ConsumerWidget` or `ConsumerStatefulWidget`).
+- Subscribes to the ViewModel state via `ref.watch(viewModelProvider)`.
+- Dispatches user events to the ViewModel using `ref.read(viewModelProvider.notifier).method()`.
+- Contains full-screen route targets and sub-widgets private to this feature.
+
+---
+
+## Benefits of this Structure
+
+1. **Strict Dependency Boundaries**: Feature packages cannot accidentally import unexposed internals of other features.
+2. **Independent Testing**: Run tests for a single feature directly (`cd features/home && flutter test`).
+3. **Clean MVVM Separation**: UI markup (`views/`) is completely decoupled from business logic and state transitions (`viewmodel/` and `state/`).
+4. **Team Scalability**: Multiple developers or teams can work on separate feature packages without merge conflicts in the main application.

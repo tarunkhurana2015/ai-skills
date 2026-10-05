@@ -1,88 +1,131 @@
-# Riverpod Best Practices for Flutter
+# Riverpod MVVM Best Practices for Flutter
 
-This guide details idiomatic patterns for state management with Riverpod 2.x/3.x.
-
----
-
-## 1. Core Principles
-
-- **Global declarations, scoped execution**: Providers are declared as top-level `final` variables, but their state is scoped inside `ProviderScope`.
-- **Prefer `Notifier` and `AsyncNotifier`**: Avoid legacy `StateNotifier` or `ChangeNotifier`. Use `Notifier<T>` for synchronous state and `AsyncNotifier<T>` for asynchronous operations.
-- **Use `ref.watch` in `build()`**: Always use `ref.watch` inside widget build methods to reactively rebuild when state updates.
-- **Use `ref.read` in callbacks**: In event listeners (e.g., `onPressed`), use `ref.read(provider.notifier).method()` to trigger mutations without subscribing to rebuilds.
+This guide details idiomatic patterns for implementing **Model-View-ViewModel (MVVM)** using Riverpod 2.x/3.x within package-based features.
 
 ---
 
-## 2. Asynchronous State with `AsyncNotifier`
+## 1. MVVM Architecture with Riverpod
 
-For network requests, database queries, and async loading states:
+In Flutter with Riverpod, MVVM maps naturally as follows:
+- **Model**: Domain entities, models, and data repositories (`domain/` and `data/`).
+- **State**: Immutable data classes describing everything the View displays (`presentation/state/`).
+- **ViewModel**: A Riverpod `Notifier<State>` or `AsyncNotifier<State>` holding UI state and exposing business logic methods (`presentation/viewmodel/`).
+- **View**: A `ConsumerWidget` that renders UI and reacts to state changes (`presentation/views/`).
+
+---
+
+## 2. Implementing the State (`presentation/state/`)
+
+State classes must be immutable with default initializers:
 
 ```dart
-import 'dart:async';
+// features/home/lib/presentation/state/counter_state.dart
+class CounterState {
+  final int count;
+  final bool isLoading;
+  final String? errorMessage;
+
+  const CounterState({
+    this.count = 0,
+    this.isLoading = false,
+    this.errorMessage,
+  });
+
+  CounterState copyWith({
+    int? count,
+    bool? isLoading,
+    String? errorMessage,
+  }) {
+    return CounterState(
+      count: count ?? this.count,
+      isLoading: isLoading ?? this.isLoading,
+      errorMessage: errorMessage,
+    );
+  }
+}
+```
+
+---
+
+## 3. Implementing the ViewModel (`presentation/viewmodel/`)
+
+The ViewModel extends `Notifier<T>` (for synchronous state) or `AsyncNotifier<T>` (for async state) and exposes a `NotifierProvider`:
+
+```dart
+// features/home/lib/presentation/viewmodel/counter_view_model.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../state/counter_state.dart';
 
-class ItemsController extends AutoDisposeAsyncNotifier<List<String>> {
+class CounterViewModel extends Notifier<CounterState> {
   @override
-  FutureOr<List<String>> build() async {
-    return _fetchInitialItems();
+  CounterState build() => const CounterState(count: 0);
+
+  void increment() {
+    state = state.copyWith(count: state.count + 1);
   }
 
-  Future<List<String>> _fetchInitialItems() async {
-    await Future.delayed(const Duration(milliseconds: 500));
-    return ['Item 1', 'Item 2', 'Item 3'];
+  void decrement() {
+    state = state.copyWith(count: state.count - 1);
   }
 
-  Future<void> addItem(String name) async {
-    // Set loading state while keeping previous data
-    state = const AsyncValue.loading();
-    state = await AsyncValue.guard(() async {
-      await Future.delayed(const Duration(milliseconds: 300));
-      final current = state.valueOrNull ?? [];
-      return [...current, name];
-    });
+  void reset() {
+    state = const CounterState(count: 0);
   }
 }
 
-final itemsProvider =
-    AsyncNotifierProvider.autoDispose<ItemsController, List<String>>(
-  ItemsController.new,
+final counterViewModelProvider =
+    NotifierProvider<CounterViewModel, CounterState>(
+  CounterViewModel.new,
 );
 ```
 
 ---
 
-## 3. Consuming State in UI (`ConsumerWidget`)
+## 4. Implementing the View (`presentation/views/`)
+
+The View consumes the ViewModel reactively via `WidgetRef`:
 
 ```dart
+// features/home/lib/presentation/views/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../viewmodel/counter_view_model.dart';
 
-class ItemsListScreen extends ConsumerWidget {
-  const ItemsListScreen({super.key});
+class HomeView extends ConsumerWidget {
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final itemsAsync = ref.watch(itemsProvider);
+    // 1. Watch state for reactive UI updates
+    final state = ref.watch(counterViewModelProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Items')),
-      body: itemsAsync.when(
-        data: (items) => ListView.builder(
-          itemCount: items.length,
-          itemBuilder: (context, index) => ListTile(
-            title: Text(items[index]),
-          ),
+      appBar: AppBar(title: const Text('Home View')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Count: ${state.count}'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // 2. Read ViewModel to execute actions without rebuilding this callback
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.read(counterViewModelProvider.notifier).decrement(),
+                  child: const Text('-'),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: () =>
+                      ref.read(counterViewModelProvider.notifier).increment(),
+                  child: const Text('+'),
+                ),
+              ],
+            ),
+          ],
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text('Error: $err'),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ref.read(itemsProvider.notifier).addItem('New Item');
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }
@@ -91,50 +134,27 @@ class ItemsListScreen extends ConsumerWidget {
 
 ---
 
-## 4. Testing Riverpod Code
+## 5. Unit Testing ViewModels in Isolation
 
-### Unit Testing Providers with `ProviderContainer`
-Test pure business logic without inflating Flutter widgets:
+Because each feature has its own `pubspec.yaml`, you can test ViewModels directly inside `features/<feature>/test/`:
 
 ```dart
+// features/home/test/viewmodel/counter_view_model_test.dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:home_feature/home_feature.dart';
 
 void main() {
-  test('ItemsController adds item successfully', () async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  group('CounterViewModel', () {
+    test('increments count properly', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    // Initial state
-    final initial = await container.read(itemsProvider.future);
-    expect(initial.length, 3);
+      expect(container.read(counterViewModelProvider).count, 0);
 
-    // Trigger action
-    await container.read(itemsProvider.notifier).addItem('Item 4');
-
-    // Verify updated state
-    final updated = container.read(itemsProvider).value;
-    expect(updated, contains('Item 4'));
+      container.read(counterViewModelProvider.notifier).increment();
+      expect(container.read(counterViewModelProvider).count, 1);
+    });
   });
 }
-```
-
-### Widget Testing with Overrides
-Mock dependencies cleanly by overriding providers in `ProviderScope`:
-
-```dart
-testWidgets('ItemsListScreen displays items from provider override', (tester) async {
-  await tester.pumpWidget(
-    ProviderScope(
-      overrides: [
-        itemsProvider.overrideWith(() => MockItemsController()),
-      ],
-      child: const MaterialApp(home: ItemsListScreen()),
-    ),
-  );
-
-  expect(find.byType(CircularProgressIndicator), findsOneWidget);
-  await tester.pumpAndSettle();
-  expect(find.text('Mock Item'), findsOneWidget);
-});
 ```

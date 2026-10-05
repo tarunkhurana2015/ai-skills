@@ -1,22 +1,22 @@
 ---
 name: flutter-scaffold-project
-description: Scaffold a production-ready Flutter starter project using Feature-First architecture, Riverpod state management, GoRouter declarative navigation, and Material 3 theming. Supports multi-platform targets (iOS, macOS Desktop, Web, Android) with standard Flutter CLI or FVM. Use when creating a new Flutter application, generating project boilerplate, bootstrapping clean architecture, or configuring core routing and state management.
+description: Scaffold a production-ready Flutter starter project using Package-Based Feature-First architecture with MVVM presentation (views, viewmodel, state), Riverpod state management, GoRouter declarative navigation, and Material 3 theming. Supports multi-platform targets (iOS, macOS Desktop, Web, Android) with standard Flutter CLI or FVM. Use when creating a new Flutter application, generating modular feature packages, bootstrapping clean MVVM architecture, or configuring routing and state management.
 ---
 
-# Scaffolding a Production Flutter Starter Project
+# Scaffolding a Production Flutter Starter Project (Package-Based MVVM)
 
-This skill provides step-by-step procedures and automated scripts for scaffolding a modern, scalable Flutter application featuring **Feature-First Architecture**, **Riverpod** for reactive state management, **GoRouter** for declarative navigation, and **Material 3** theming.
+This skill provides step-by-step procedures and automated scripts for scaffolding a modern, scalable Flutter application featuring **Package-Based Feature-First Architecture**, **MVVM (Model-View-ViewModel)** in presentation layers, **Riverpod** for reactive state management, **GoRouter** for declarative navigation, and **Material 3** theming.
 
 ## Contents
 - [Core Architecture & Concepts](#core-architecture--concepts)
 - [Task Checklist](#task-checklist)
 - [Automated Scaffolding](#automated-scaffolding)
 - [Step-by-Step Scaffolding Workflow](#step-by-step-scaffolding-workflow)
-  - [1. Initialize the Project](#1-initialize-the-project)
-  - [2. Add Dependencies](#2-add-dependencies)
-  - [3. Scaffold the Feature-First Structure](#3-scaffold-the-feature-first-structure)
-  - [4. Configure Core Foundation (Theme & Router)](#4-configure-core-foundation-theme--router)
-  - [5. Implement Initial Features](#5-implement-initial-features)
+  - [1. Initialize the Host Project](#1-initialize-the-host-project)
+  - [2. Scaffold Package-Based Features (MVVM)](#2-scaffold-package-based-features-mvvm)
+  - [3. Implement MVVM Layers in Features](#3-implement-mvvm-layers-in-features)
+  - [4. Wire Feature Packages in the Host App](#4-wire-feature-packages-in-the-host-app)
+  - [5. Configure Core Foundation (Theme & Router)](#5-configure-core-foundation-theme--router)
   - [6. Configure Multi-Platform Entitlements](#6-configure-multi-platform-entitlements)
   - [7. Write Unit and Widget Tests](#7-write-unit-and-widget-tests)
 - [Validation Loop](#validation-loop)
@@ -26,10 +26,13 @@ This skill provides step-by-step procedures and automated scripts for scaffoldin
 
 ## Core Architecture & Concepts
 
-- **Feature-First Architecture**: Group code by business capabilities (`features/<feature>/`) rather than technical layers. Each feature contains its own `presentation/`, `domain/`, and `data/` subdirectories alongside shared app-level `core/`.
-- **Riverpod State Management**: Uses `ProviderScope`, `Notifier<T>`, and `ConsumerWidget` for type-safe, compile-time verified state with clean unit test mocking.
-- **GoRouter**: Centralized route tree supporting deep links, URL-based web navigation, and transitions.
-- **Material 3 Theming**: Consistent design tokens, light/dark mode switching via Riverpod, and seed-based color palettes.
+- **Package-Based Feature Modules**: Features live in `features/<feature_name>/` as independent Dart/Flutter packages, each with its own `pubspec.yaml`, dependencies, and isolated test suites.
+- **MVVM Presentation Layer**: Within each feature's `lib/presentation/`:
+  - `state/`: Immutable UI state models (data classes with `copyWith`).
+  - `viewmodel/`: Riverpod `Notifier<State>` holding UI state and business methods.
+  - `views/`: `ConsumerWidget` UI screens and widgets subscribing to the ViewModel.
+- **Declarative Routing with GoRouter**: Centralized route tree mapping URLs to feature `views`.
+- **Material 3 Theming**: Consistent design tokens and dynamic theme switching via Riverpod.
 - **Multi-Platform Support**: Built for iOS, macOS Desktop, and Web out of the box (with optional Android support).
 
 ---
@@ -38,15 +41,16 @@ This skill provides step-by-step procedures and automated scripts for scaffoldin
 
 Use this checklist during scaffolding:
 
-- [ ] Run `flutter create` with targeted platforms and reverse-domain org.
-- [ ] Add `flutter_riverpod` and `go_router` dependencies.
-- [ ] Scaffold `lib/core/` and `lib/features/` directories.
+- [ ] Run `flutter create` for the host app targeting specified platforms.
+- [ ] Scaffold `features/<feature>/` as independent packages with their own `pubspec.yaml`.
+- [ ] Implement MVVM in each feature: `presentation/state/`, `presentation/viewmodel/`, and `presentation/views/`.
+- [ ] Export public feature interfaces via `lib/<feature_name>.dart` barrel files.
+- [ ] Add feature packages as local path dependencies in host app `pubspec.yaml`.
 - [ ] Configure `AppTheme` (Material 3 light and dark themes).
-- [ ] Set up `GoRouter` with Riverpod integration (`routerProvider`).
-- [ ] Implement initial features (`home` and `settings`).
+- [ ] Configure `GoRouter` referencing feature views.
 - [ ] Wire `main.dart` with `ProviderScope` and `MaterialApp.router`.
 - [ ] Enable macOS network client entitlement in `macos/Runner/*.entitlements`.
-- [ ] Implement unit and widget tests using `ProviderContainer` and `ProviderScope`.
+- [ ] Implement feature-level unit tests and host-level widget tests.
 - [ ] Validate codebase with `flutter analyze` and `flutter test`.
 
 ---
@@ -68,8 +72,7 @@ Add `--fvm` if using Flutter Version Management.
 
 ## Step-by-Step Scaffolding Workflow
 
-### 1. Initialize the Project
-Create the application targeting your required platforms:
+### 1. Initialize the Host Project
 ```bash
 flutter create --org com.example --platforms=ios,macos,web --project-name my_app my_app
 cd my_app
@@ -77,104 +80,83 @@ cd my_app
 
 *(If using FVM: `fvm flutter create ...`)*
 
-### 2. Add Dependencies
+### 2. Scaffold Package-Based Features (MVVM)
+Create feature package structures:
 ```bash
-flutter pub add flutter_riverpod go_router
+mkdir -p features/home/{lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{lib/presentation/{views,viewmodel,state},test}
 ```
 
-### 3. Scaffold the Feature-First Structure
-```bash
-mkdir -p lib/core/{constants,router,theme,utils}
-mkdir -p lib/features/home/{data,domain,presentation/{controllers,screens,widgets}}
-mkdir -p lib/features/settings/presentation/{controllers,screens}
+#### Feature `pubspec.yaml` (`features/home/pubspec.yaml`):
+```yaml
+name: home_feature
+description: Home feature package
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.11.0
+  flutter: ">=3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
 ```
 
-### 4. Configure Core Foundation (Theme & Router)
+### 3. Implement MVVM Layers in Features
 
-#### `lib/core/theme/app_theme.dart`
+#### A. State (`features/home/lib/presentation/state/counter_state.dart`):
 ```dart
-import 'package:flutter/material.dart';
+class CounterState {
+  final int count;
+  const CounterState({this.count = 0});
 
-class AppTheme {
-  static final ThemeData lightTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.light,
-    colorSchemeSeed: Colors.indigo,
-    appBarTheme: const AppBarTheme(centerTitle: true),
-  );
-
-  static final ThemeData darkTheme = ThemeData(
-    useMaterial3: true,
-    brightness: Brightness.dark,
-    colorSchemeSeed: Colors.indigo,
-    appBarTheme: const AppBarTheme(centerTitle: true),
-  );
+  CounterState copyWith({int? count}) {
+    return CounterState(count: count ?? this.count);
+  }
 }
 ```
 
-#### `lib/core/router/app_router.dart`
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../features/home/presentation/screens/home_screen.dart';
-import '../../features/settings/presentation/screens/settings_screen.dart';
-
-final routerProvider = Provider<GoRouter>((ref) {
-  return GoRouter(
-    initialLocation: '/',
-    routes: [
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsScreen(),
-      ),
-    ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Page not found: ${state.uri}')),
-    ),
-  );
-});
-```
-
-### 5. Implement Initial Features
-
-#### State Controller: `lib/features/home/presentation/controllers/counter_controller.dart`
+#### B. ViewModel (`features/home/lib/presentation/viewmodel/counter_view_model.dart`):
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../state/counter_state.dart';
 
-class CounterController extends Notifier<int> {
+class CounterViewModel extends Notifier<CounterState> {
   @override
-  int build() => 0;
+  CounterState build() => const CounterState(count: 0);
 
-  void increment() => state++;
-  void decrement() => state--;
-  void reset() => state = 0;
+  void increment() => state = state.copyWith(count: state.count + 1);
+  void decrement() => state = state.copyWith(count: state.count - 1);
+  void reset() => state = const CounterState(count: 0);
 }
 
-final counterProvider = NotifierProvider<CounterController, int>(
-  CounterController.new,
+final counterViewModelProvider =
+    NotifierProvider<CounterViewModel, CounterState>(
+  CounterViewModel.new,
 );
 ```
 
-#### UI Screen: `lib/features/home/presentation/screens/home_screen.dart`
+#### C. View (`features/home/lib/presentation/views/home_view.dart`):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../controllers/counter_controller.dart';
+import '../viewmodel/counter_view_model.dart';
 
-class HomeScreen extends ConsumerWidget {
-  const HomeScreen({super.key});
+class HomeView extends ConsumerWidget {
+  const HomeView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final count = ref.watch(counterProvider);
+    final state = ref.watch(counterViewModelProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -190,19 +172,19 @@ class HomeScreen extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Count:', style: TextStyle(fontSize: 18)),
-            Text('$count', style: Theme.of(context).textTheme.displayMedium),
+            const Text('Current Counter Value:'),
+            Text('${state.count}', style: Theme.of(context).textTheme.displayMedium),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 FilledButton.tonal(
-                  onPressed: () => ref.read(counterProvider.notifier).decrement(),
+                  onPressed: () => ref.read(counterViewModelProvider.notifier).decrement(),
                   child: const Text('-'),
                 ),
                 const SizedBox(width: 16),
                 FilledButton(
-                  onPressed: () => ref.read(counterProvider.notifier).increment(),
+                  onPressed: () => ref.read(counterViewModelProvider.notifier).increment(),
                   child: const Text('+'),
                 ),
               ],
@@ -211,7 +193,7 @@ class HomeScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => ref.read(counterProvider.notifier).reset(),
+        onPressed: () => ref.read(counterViewModelProvider.notifier).reset(),
         child: const Icon(Icons.refresh),
       ),
     );
@@ -219,7 +201,50 @@ class HomeScreen extends ConsumerWidget {
 }
 ```
 
-#### Root Wiring: `lib/app.dart` & `lib/main.dart`
+#### D. Barrel Export (`features/home/lib/home_feature.dart`):
+```dart
+export 'presentation/state/counter_state.dart';
+export 'presentation/viewmodel/counter_view_model.dart';
+export 'presentation/views/home_view.dart';
+```
+
+### 4. Wire Feature Packages in the Host App
+Add dependencies and local path packages to the host app:
+```bash
+flutter pub add flutter_riverpod go_router
+flutter pub add 'home_feature:{"path":"features/home"}' 'settings_feature:{"path":"features/settings"}'
+```
+
+### 5. Configure Core Foundation (Theme & Router)
+
+#### `lib/core/router/app_router.dart`:
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:home_feature/home_feature.dart';
+import 'package:settings_feature/settings_feature.dart';
+
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: '/',
+    routes: [
+      GoRoute(
+        path: '/',
+        name: 'home',
+        builder: (context, state) => const HomeView(),
+      ),
+      GoRoute(
+        path: '/settings',
+        name: 'settings',
+        builder: (context, state) => const SettingsView(),
+      ),
+    ],
+  );
+});
+```
+
+#### `lib/app.dart` & `lib/main.dart`:
 ```dart
 // lib/main.dart
 import 'package:flutter/material.dart';
@@ -234,6 +259,7 @@ void main() {
 // lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:settings_feature/settings_feature.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
@@ -243,11 +269,13 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
+    final themeState = ref.watch(themeViewModelProvider);
 
     return MaterialApp.router(
       title: 'Starter App',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
+      themeMode: themeState.mode,
       routerConfig: router,
     );
   }
@@ -263,20 +291,20 @@ On macOS, enable network client capabilities in `macos/Runner/DebugProfile.entit
 
 ### 7. Write Unit and Widget Tests
 
-#### Unit Test with `ProviderContainer` (`test/unit/counter_controller_test.dart`)
+#### Feature-Level MVVM Unit Test (`features/home/test/viewmodel/counter_view_model_test.dart`):
 ```dart
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:my_app/features/home/presentation/controllers/counter_controller.dart';
+import 'package:home_feature/home_feature.dart';
 
 void main() {
-  test('CounterController increments state', () {
+  test('CounterViewModel increments state', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
 
-    expect(container.read(counterProvider), 0);
-    container.read(counterProvider.notifier).increment();
-    expect(container.read(counterProvider), 1);
+    expect(container.read(counterViewModelProvider).count, 0);
+    container.read(counterViewModelProvider.notifier).increment();
+    expect(container.read(counterViewModelProvider).count, 1);
   });
 }
 ```
@@ -285,17 +313,22 @@ void main() {
 
 ## Validation Loop
 
-Verify the project status:
+Verify the project status across all packages:
 
-1. **Static Analysis**:
+1. **Test Feature Packages**:
+   ```bash
+   (cd features/home && flutter test)
+   (cd features/settings && flutter test)
+   ```
+2. **Analyze Full Codebase**:
    ```bash
    flutter analyze
    ```
-2. **Automated Tests**:
+3. **Run Host App Tests**:
    ```bash
    flutter test
    ```
-3. **Launch on Targets**:
+4. **Launch on Targets**:
    ```bash
    flutter run -d chrome
    flutter run -d macos
@@ -305,6 +338,6 @@ Verify the project status:
 
 ## References
 
-- [Feature-First Architecture Guide](./references/feature_first_guide.md): In-depth folder organization and layer responsibilities.
-- [Riverpod Best Practices Guide](./references/riverpod_best_practices.md): Idiomatic patterns for Notifiers, AsyncNotifiers, and test overrides.
-- [Automated Scaffolding Script](./scripts/scaffold_starter.sh): One-click starter project generator.
+- [Package-Based Feature Guide (MVVM)](./references/feature_first_guide.md): Details on feature packaging and MVVM separation of concerns.
+- [Riverpod MVVM Best Practices](./references/riverpod_best_practices.md): Idiomatic patterns for ViewModels, State classes, and test overrides.
+- [Automated Scaffolding Script](./scripts/scaffold_starter.sh): One-click starter project generator with package-based MVVM.
