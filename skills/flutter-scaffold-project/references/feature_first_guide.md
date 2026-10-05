@@ -10,7 +10,12 @@ In a **Package-Based Feature-First** architecture, features are encapsulated as 
 my_flutter_app/
 ├── pubspec.yaml                     # App root dependencies & local path packages
 ├── l10n.yaml                        # Root localization configuration (global app strings)
-├── lib/
+│
+├── ios/                             # Native iOS runner (Xcode workspace, Runner, Podfile)
+├── macos/                           # Native macOS runner (Xcode workspace, entitlements, AppKit shell)
+├── web/                             # Native Web runner (index.html, manifest.json, favicon)
+│
+├── lib/                             # Host app Dart code
 │   ├── main.dart                    # App entry point, ProviderScope initialization
 │   ├── app.dart                     # MaterialApp.router aggregating feature localizationsDelegates
 │   ├── l10n/                        # Global/shell localization resource files (.arb)
@@ -23,7 +28,10 @@ my_flutter_app/
 │       ├── theme/                   # Material 3 light/dark themes & design tokens
 │       └── utils/                   # Shared utilities & extensions
 │
-└── features/                        # Package-based feature modules
+├── test/                            # Host app widget and integration tests
+│   └── widget_test.dart
+│
+└── features/                        # Package-based feature modules (Pure Dart/Flutter packages)
     ├── home/                        # Feature Package (home_feature)
     │   ├── pubspec.yaml             # Isolated dependencies: flutter_localizations, generate: true
     │   ├── l10n.yaml                # Package-level l10n config (output-class: HomeLocalizations)
@@ -78,6 +86,26 @@ my_flutter_app/
                 └── views/
                     └── settings_view.dart
 ```
+
+---
+
+## Host Application vs. Feature Packages
+
+### 1. Where do the native platform runners live?
+The native platform projects are created at the **root level of the host application**:
+- **`ios/`**: The native iOS Xcode project (`Runner.xcworkspace`, `Podfile`, `Info.plist`).
+- **`macos/`**: The native macOS desktop project (`Runner.xcworkspace`, `AppKit` runner, macOS network entitlements).
+- **`web/`**: The web platform host (`index.html`, `manifest.json`, web icons, and Wasm/JS bootstrap).
+
+When you run `flutter run -d chrome`, `flutter run -d macos`, or `flutter run -d ios`, the Flutter CLI executes from the **root directory (`my_flutter_app/`)**, invoking the corresponding native platform runner and bootstrapping `lib/main.dart`.
+
+### 2. Why don't feature packages have native platform folders?
+Feature packages in `features/` (e.g. `home_feature`, `settings_feature`) are created as **modular library packages**. They contain pure Flutter/Dart code:
+- Presentation (views, viewmodels, state models, route configs)
+- Domain and data logic (entities, repositories)
+- Translations (`.arb` files and generated localizations)
+
+Because they are library packages, they remain 100% portable and platform-agnostic. The root host app imports them as local dependencies (`path: features/home`) and compiles them into whatever native platform runner (`ios`, `macos`, or `web`) is being targeted.
 
 ---
 

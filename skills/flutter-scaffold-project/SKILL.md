@@ -83,6 +83,14 @@ flutter create --org com.example --platforms=ios,macos,web --project-name my_app
 cd my_app
 ```
 
+> [!NOTE]
+> This command creates the executable host Flutter application containing the native platform runners at the root:
+> - `ios/`: Native iOS Xcode workspace (`Runner.xcworkspace`), CocoaPods/SPM configuration, and `Info.plist`.
+> - `macos/`: Native macOS desktop project (`Runner.xcworkspace`), AppKit window wrapper, and security entitlements.
+> - `web/`: Web platform host (`index.html`, `manifest.json`, and bootstrap loader).
+>
+> The modular packages inside `features/` are pure Dart/Flutter library packages without native runners—the host application compiles and bundles them into whichever platform target you run (`flutter run -d chrome`, `flutter run -d macos`, or `flutter run -d ios`).
+
 *(If using FVM: `fvm flutter create ...`)*
 
 ### 2. Scaffold Package-Based Features (MVVM & Router)
