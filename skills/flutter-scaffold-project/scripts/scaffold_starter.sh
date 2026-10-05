@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Flutter Package-Based Feature-First Starter Scaffolding Script (MVVM)
-# Creates a production-ready Flutter app where features are independent packages with MVVM structure.
+# Creates a production-ready Flutter app with:
+# - Package-based features with MVVM (views, viewmodel, state, router)
+# - Package-level router.config.dart for modular routing
+# - Package-level docs/ and test/ directories
+# - Full l10n localization support (.arb and AppLocalizations)
+# - Riverpod state management and Material 3 theming
 
 set -euo pipefail
 
@@ -105,9 +110,9 @@ if [[ "$PLATFORMS" == *"macos"* ]] && [ -d "macos" ]; then
   done
 fi
 
-echo "==> Scaffolding package-based features with MVVM..."
-mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state},test/viewmodel}
+echo "==> Scaffolding package-based features with MVVM, router.config, docs, and tests..."
+mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
 
 # -----------------------------------------------------------------------------
 # 1. Feature Package: home_feature
@@ -144,6 +149,7 @@ cat << 'EOF' > features/home/docs/README.md
 Self-contained feature package managing the counter domain and landing experience following the Model-View-ViewModel (MVVM) architecture.
 
 ## Architecture
+- **Router**: `lib/presentation/router/router.config.dart`
 - **State**: `lib/presentation/state/counter_state.dart`
 - **ViewModel**: `lib/presentation/viewmodel/counter_view_model.dart`
 - **Views**: `lib/presentation/views/home_view.dart`
@@ -152,8 +158,26 @@ Self-contained feature package managing the counter domain and landing experienc
 Exports public components via `lib/home_feature.dart`.
 EOF
 
+# features/home/lib/presentation/router/router.config.dart
+cat << 'EOF' > features/home/lib/presentation/router/router.config.dart
+import 'package:go_router/go_router.dart';
+import '../views/home_view.dart';
+
+class HomeRouterConfig {
+  static const String routeName = 'home';
+  static const String routePath = '/';
+
+  static final RouteBase route = GoRoute(
+    path: routePath,
+    name: routeName,
+    builder: (context, state) => const HomeView(),
+  );
+}
+EOF
+
 # features/home/lib/home_feature.dart (Barrel file)
 cat << 'EOF' > features/home/lib/home_feature.dart
+export 'presentation/router/router.config.dart';
 export 'presentation/state/counter_state.dart';
 export 'presentation/viewmodel/counter_view_model.dart';
 export 'presentation/views/home_view.dart';
@@ -335,6 +359,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.3.2
+  go_router: ^17.5.0
 
 dev_dependencies:
   flutter_test:
@@ -350,6 +375,7 @@ cat << 'EOF' > features/settings/docs/README.md
 Self-contained feature package handling application-wide settings and Material 3 theme modes following the Model-View-ViewModel (MVVM) architecture.
 
 ## Architecture
+- **Router**: `lib/presentation/router/router.config.dart`
 - **State**: `lib/presentation/state/theme_state.dart`
 - **ViewModel**: `lib/presentation/viewmodel/theme_view_model.dart`
 - **Views**: `lib/presentation/views/settings_view.dart`
@@ -358,8 +384,26 @@ Self-contained feature package handling application-wide settings and Material 3
 Exports public components via `lib/settings_feature.dart`.
 EOF
 
+# features/settings/lib/presentation/router/router.config.dart
+cat << 'EOF' > features/settings/lib/presentation/router/router.config.dart
+import 'package:go_router/go_router.dart';
+import '../views/settings_view.dart';
+
+class SettingsRouterConfig {
+  static const String routeName = 'settings';
+  static const String routePath = '/settings';
+
+  static final RouteBase route = GoRoute(
+    path: routePath,
+    name: routeName,
+    builder: (context, state) => const SettingsView(),
+  );
+}
+EOF
+
 # features/settings/lib/settings_feature.dart (Barrel file)
 cat << 'EOF' > features/settings/lib/settings_feature.dart
+export 'presentation/router/router.config.dart';
 export 'presentation/state/theme_state.dart';
 export 'presentation/viewmodel/theme_view_model.dart';
 export 'presentation/views/settings_view.dart';
@@ -492,17 +536,72 @@ void main() {
 EOF
 
 # -----------------------------------------------------------------------------
-# 3. Host Application Setup & Wiring
+# 3. Host Application Setup & Wiring (l10n, Router, MVVM)
 # -----------------------------------------------------------------------------
 
-echo "==> Wiring host app dependencies and local path packages..."
+echo "==> Wiring host app dependencies, l10n, and local path packages..."
 $FLUTTER_CMD pub add flutter_riverpod go_router
+$FLUTTER_CMD pub add flutter_localizations --sdk=flutter
+$FLUTTER_CMD pub add intl:any
 $FLUTTER_CMD pub add 'home_feature:{"path":"features/home"}' 'settings_feature:{"path":"features/settings"}'
 
-echo "==> Resolving packages..."
+# Configure l10n generation in pubspec.yaml
+if ! grep -q "generate: true" pubspec.yaml; then
+  sed -i '' -e '/^flutter:/a\
+  generate: true
+' pubspec.yaml
+fi
+
+# Create l10n.yaml
+cat << 'EOF' > l10n.yaml
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+EOF
+
+mkdir -p lib/l10n
+
+# lib/l10n/app_en.arb
+cat << 'EOF' > lib/l10n/app_en.arb
+{
+  "@@locale": "en",
+  "appTitle": "Flutter Starter App",
+  "homeTitle": "Home",
+  "settingsTitle": "Settings",
+  "counterLabel": "Current Counter Value:",
+  "increment": "Increment",
+  "decrement": "Decrement",
+  "reset": "Reset",
+  "appearance": "Appearance",
+  "systemTheme": "System",
+  "lightTheme": "Light",
+  "darkTheme": "Dark"
+}
+EOF
+
+# lib/l10n/app_es.arb
+cat << 'EOF' > lib/l10n/app_es.arb
+{
+  "@@locale": "es",
+  "appTitle": "Aplicación Flutter",
+  "homeTitle": "Inicio",
+  "settingsTitle": "Ajustes",
+  "counterLabel": "Valor Actual del Contador:",
+  "increment": "Incrementar",
+  "decrement": "Disminuir",
+  "reset": "Restablecer",
+  "appearance": "Apariencia",
+  "systemTheme": "Sistema",
+  "lightTheme": "Claro",
+  "darkTheme": "Oscuro"
+}
+EOF
+
+echo "==> Resolving packages and generating localizations..."
 (cd features/home && $FLUTTER_CMD pub get)
 (cd features/settings && $FLUTTER_CMD pub get)
 $FLUTTER_CMD pub get
+$FLUTTER_CMD gen-l10n
 
 echo "==> Scaffolding host app core architecture..."
 mkdir -p lib/core/{constants,router,theme,utils}
@@ -541,7 +640,7 @@ class AppTheme {
 }
 EOF
 
-# lib/core/router/app_router.dart
+# lib/core/router/app_router.dart (Mounts package router.config routes)
 cat << 'EOF' > lib/core/router/app_router.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -551,18 +650,10 @@ import 'package:settings_feature/settings_feature.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: HomeRouterConfig.routePath,
     routes: [
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeView(),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsView(),
-      ),
+      HomeRouterConfig.route,
+      SettingsRouterConfig.route,
     ],
     errorBuilder: (context, state) => Scaffold(
       body: Center(
@@ -573,7 +664,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 });
 EOF
 
-# lib/app.dart
+# lib/app.dart (Includes localizations delegates and router)
 cat << 'EOF' > lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -581,6 +672,7 @@ import 'package:settings_feature/settings_feature.dart';
 import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -597,6 +689,8 @@ class MyApp extends ConsumerWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: themeState.mode,
       routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }
@@ -659,9 +753,11 @@ $FLUTTER_CMD test
 
 echo ""
 echo "==> Success! Scaffolding completed for $APP_NAME."
-echo "Features are isolated in features/ as independent packages with MVVM architecture:"
-echo "  - features/home/ (home_feature package: views, viewmodel, state)"
-echo "  - features/settings/ (settings_feature package: views, viewmodel, state)"
+echo "Architecture highlights:"
+echo "  - Package-based features with MVVM: views, viewmodel, state, router.config"
+echo "  - Package-level docs/ and test/ directories"
+echo "  - Modular routing: feature packages define their own router.config.dart"
+echo "  - Official l10n localization support configured with AppLocalizations"
 echo ""
 echo "To run your app:"
 echo "  cd $APP_NAME"

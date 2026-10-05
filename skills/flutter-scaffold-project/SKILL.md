@@ -1,11 +1,11 @@
 ---
 name: flutter-scaffold-project
-description: Scaffold a production-ready Flutter starter project using Package-Based Feature-First architecture with MVVM presentation (views, viewmodel, state), Riverpod state management, GoRouter declarative navigation, and Material 3 theming. Supports multi-platform targets (iOS, macOS Desktop, Web, Android) with standard Flutter CLI or FVM. Use when creating a new Flutter application, generating modular feature packages, bootstrapping clean MVVM architecture, or configuring routing and state management.
+description: Scaffold a production-ready Flutter starter project using Package-Based Feature-First architecture with MVVM presentation (views, viewmodel, state, router.config), package-level docs and tests, GoRouter modular navigation, l10n localization, Riverpod state management, and Material 3 theming. Supports multi-platform targets (iOS, macOS Desktop, Web, Android) with standard Flutter CLI or FVM.
 ---
 
 # Scaffolding a Production Flutter Starter Project (Package-Based MVVM)
 
-This skill provides step-by-step procedures and automated scripts for scaffolding a modern, scalable Flutter application featuring **Package-Based Feature-First Architecture**, **MVVM (Model-View-ViewModel)** in presentation layers, **Riverpod** for reactive state management, **GoRouter** for declarative navigation, and **Material 3** theming.
+This skill provides step-by-step procedures and automated scripts for scaffolding a modern, scalable Flutter application featuring **Package-Based Feature-First Architecture**, **MVVM (Model-View-ViewModel)** in presentation layers, **Modular Routing via `router.config.dart`**, **`l10n` Localization**, **Riverpod** for reactive state management, **GoRouter**, and **Material 3** theming.
 
 ## Contents
 - [Core Architecture & Concepts](#core-architecture--concepts)
@@ -13,12 +13,13 @@ This skill provides step-by-step procedures and automated scripts for scaffoldin
 - [Automated Scaffolding](#automated-scaffolding)
 - [Step-by-Step Scaffolding Workflow](#step-by-step-scaffolding-workflow)
   - [1. Initialize the Host Project](#1-initialize-the-host-project)
-  - [2. Scaffold Package-Based Features (MVVM)](#2-scaffold-package-based-features-mvvm)
-  - [3. Implement MVVM Layers in Features](#3-implement-mvvm-layers-in-features)
-  - [4. Wire Feature Packages in the Host App](#4-wire-feature-packages-in-the-host-app)
-  - [5. Configure Core Foundation (Theme & Router)](#5-configure-core-foundation-theme--router)
-  - [6. Configure Multi-Platform Entitlements](#6-configure-multi-platform-entitlements)
-  - [7. Write Unit and Widget Tests](#7-write-unit-and-widget-tests)
+  - [2. Scaffold Package-Based Features (MVVM & Router)](#2-scaffold-package-based-features-mvvm--router)
+  - [3. Implement MVVM Layers & Package Router Config](#3-implement-mvvm-layers--package-router-config)
+  - [4. Configure Localization (l10n)](#4-configure-localization-l10n)
+  - [5. Wire Feature Packages in the Host App](#5-wire-feature-packages-in-the-host-app)
+  - [6. Configure Core Foundation (Theme & Host Router)](#6-configure-core-foundation-theme--host-router)
+  - [7. Configure Multi-Platform Entitlements](#7-configure-multi-platform-entitlements)
+  - [8. Write Unit and Widget Tests](#8-write-unit-and-widget-tests)
 - [Validation Loop](#validation-loop)
 - [References](#references)
 
@@ -26,12 +27,14 @@ This skill provides step-by-step procedures and automated scripts for scaffoldin
 
 ## Core Architecture & Concepts
 
-- **Package-Based Feature Modules**: Features live in `features/<feature_name>/` as independent Dart/Flutter packages, each with its own `pubspec.yaml`, dependencies, and isolated test suites.
+- **Package-Based Feature Modules**: Features live in `features/<feature_name>/` as independent Dart/Flutter packages, each with its own `pubspec.yaml`, dependencies, `docs/`, and isolated `test/` suites.
 - **MVVM Presentation Layer**: Within each feature's `lib/presentation/`:
+  - `router/`: Contains `router.config.dart` exporting the package's `RouteBase` definitions.
   - `state/`: Immutable UI state models (data classes with `copyWith`).
   - `viewmodel/`: Riverpod `Notifier<State>` holding UI state and business methods.
   - `views/`: `ConsumerWidget` UI screens and widgets subscribing to the ViewModel.
-- **Declarative Routing with GoRouter**: Centralized route tree mapping URLs to feature `views`.
+- **Modular Package Routing**: Each feature package declares its own route in `router.config.dart`. The host app's central `GoRouter` simply mounts these routes.
+- **Official Flutter Localization (l10n)**: Uses `l10n.yaml` with `.arb` translation files (`app_en.arb`, `app_es.arb`), generating `AppLocalizations`.
 - **Material 3 Theming**: Consistent design tokens and dynamic theme switching via Riverpod.
 - **Multi-Platform Support**: Built for iOS, macOS Desktop, and Web out of the box (with optional Android support).
 
@@ -43,12 +46,14 @@ Use this checklist during scaffolding:
 
 - [ ] Run `flutter create` for the host app targeting specified platforms.
 - [ ] Scaffold `features/<feature>/` as independent packages with their own `pubspec.yaml`, `docs/`, and `test/` directories.
+- [ ] Implement `router.config.dart` defining `RouteBase` in each feature package.
 - [ ] Implement MVVM in each feature: `presentation/state/`, `presentation/viewmodel/`, and `presentation/views/`.
 - [ ] Export public feature interfaces via `lib/<feature_name>.dart` barrel files.
+- [ ] Configure `l10n.yaml` and `.arb` translation files for localization.
 - [ ] Add feature packages as local path dependencies in host app `pubspec.yaml`.
 - [ ] Configure `AppTheme` (Material 3 light and dark themes).
-- [ ] Configure `GoRouter` referencing feature views.
-- [ ] Wire `main.dart` with `ProviderScope` and `MaterialApp.router`.
+- [ ] Configure host `GoRouter` mounting feature `router.config` routes.
+- [ ] Wire `main.dart` with `ProviderScope` and `MaterialApp.router` (with `localizationsDelegates`).
 - [ ] Enable macOS network client entitlement in `macos/Runner/*.entitlements`.
 - [ ] Implement feature-level unit tests (`features/<feature>/test/`) and host-level widget tests (`test/`).
 - [ ] Validate codebase with `flutter analyze` and `flutter test`.
@@ -80,14 +85,14 @@ cd my_app
 
 *(If using FVM: `fvm flutter create ...`)*
 
-### 2. Scaffold Package-Based Features (MVVM)
-Create feature package structures including package-level `docs/` and `test/` directories:
+### 2. Scaffold Package-Based Features (MVVM & Router)
+Create feature package structures including `docs/`, `test/`, and `presentation/router/` directories:
 ```bash
-mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state},test/viewmodel}
+mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
 ```
 
-#### A. Feature `pubspec.yaml` (`features/home/pubspec.yaml`):
+#### Feature `pubspec.yaml` (`features/home/pubspec.yaml`):
 ```yaml
 name: home_feature
 description: Home feature package
@@ -110,22 +115,26 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 ```
 
-#### B. Package Documentation (`features/home/docs/README.md`):
-```markdown
-# Home Feature Package (`home_feature`)
+### 3. Implement MVVM Layers & Package Router Config
 
-## Overview
-Self-contained feature package managing counter domain logic and landing experience following MVVM.
+#### A. Package Route Config (`features/home/lib/presentation/router/router.config.dart`):
+```dart
+import 'package:go_router/go_router.dart';
+import '../views/home_view.dart';
 
-## Architecture
-- State: `lib/presentation/state/counter_state.dart`
-- ViewModel: `lib/presentation/viewmodel/counter_view_model.dart`
-- Views: `lib/presentation/views/home_view.dart`
+class HomeRouterConfig {
+  static const String routeName = 'home';
+  static const String routePath = '/';
+
+  static final RouteBase route = GoRoute(
+    path: routePath,
+    name: routeName,
+    builder: (context, state) => const HomeView(),
+  );
+}
 ```
 
-### 3. Implement MVVM Layers in Features
-
-#### A. State (`features/home/lib/presentation/state/counter_state.dart`):
+#### B. State (`features/home/lib/presentation/state/counter_state.dart`):
 ```dart
 class CounterState {
   final int count;
@@ -137,7 +146,7 @@ class CounterState {
 }
 ```
 
-#### B. ViewModel (`features/home/lib/presentation/viewmodel/counter_view_model.dart`):
+#### C. ViewModel (`features/home/lib/presentation/viewmodel/counter_view_model.dart`):
 ```dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/counter_state.dart';
@@ -157,7 +166,7 @@ final counterViewModelProvider =
 );
 ```
 
-#### C. View (`features/home/lib/presentation/views/home_view.dart`):
+#### D. View (`features/home/lib/presentation/views/home_view.dart`):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -214,23 +223,52 @@ class HomeView extends ConsumerWidget {
 }
 ```
 
-#### D. Barrel Export (`features/home/lib/home_feature.dart`):
+#### E. Barrel Export (`features/home/lib/home_feature.dart`):
 ```dart
+export 'presentation/router/router.config.dart';
 export 'presentation/state/counter_state.dart';
 export 'presentation/viewmodel/counter_view_model.dart';
 export 'presentation/views/home_view.dart';
 ```
 
-### 4. Wire Feature Packages in the Host App
+### 4. Configure Localization (l10n)
+
+Add localization dependencies and enable code generation:
+```bash
+flutter pub add flutter_localizations --sdk=flutter
+flutter pub add intl:any
+```
+
+#### `l10n.yaml`:
+```yaml
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+```
+
+#### Translation Files (`lib/l10n/app_en.arb` & `lib/l10n/app_es.arb`):
+```json
+{
+  "@@locale": "en",
+  "appTitle": "Flutter Starter App",
+  "homeTitle": "Home",
+  "settingsTitle": "Settings",
+  "counterLabel": "Current Counter Value:"
+}
+```
+
+Run `flutter gen-l10n` to compile localization classes.
+
+### 5. Wire Feature Packages in the Host App
 Add dependencies and local path packages to the host app:
 ```bash
 flutter pub add flutter_riverpod go_router
 flutter pub add 'home_feature:{"path":"features/home"}' 'settings_feature:{"path":"features/settings"}'
 ```
 
-### 5. Configure Core Foundation (Theme & Router)
+### 6. Configure Core Foundation (Theme & Host Router)
 
-#### `lib/core/router/app_router.dart`:
+#### Host Router Mounting Feature `router.config.dart` (`lib/core/router/app_router.dart`):
 ```dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -240,41 +278,27 @@ import 'package:settings_feature/settings_feature.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: HomeRouterConfig.routePath,
     routes: [
-      GoRoute(
-        path: '/',
-        name: 'home',
-        builder: (context, state) => const HomeView(),
-      ),
-      GoRoute(
-        path: '/settings',
-        name: 'settings',
-        builder: (context, state) => const SettingsView(),
-      ),
+      HomeRouterConfig.route,
+      SettingsRouterConfig.route,
     ],
+    errorBuilder: (context, state) => Scaffold(
+      body: Center(child: Text('Page not found: ${state.uri}')),
+    ),
   );
 });
 ```
 
-#### `lib/app.dart` & `lib/main.dart`:
+#### `lib/app.dart` (Configured with l10n and Router):
 ```dart
-// lib/main.dart
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'app.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const ProviderScope(child: MyApp()));
-}
-
-// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:settings_feature/settings_feature.dart';
+import 'core/constants/app_constants.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -285,24 +309,27 @@ class MyApp extends ConsumerWidget {
     final themeState = ref.watch(themeViewModelProvider);
 
     return MaterialApp.router(
-      title: 'Starter App',
+      title: AppConstants.appTitle,
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeState.mode,
       routerConfig: router,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }
 ```
 
-### 6. Configure Multi-Platform Entitlements
+### 7. Configure Multi-Platform Entitlements
 On macOS, enable network client capabilities in `macos/Runner/DebugProfile.entitlements` and `Release.entitlements`:
 ```xml
 <key>com.apple.security.network.client</key>
 <true/>
 ```
 
-### 7. Write Unit and Widget Tests
+### 8. Write Unit and Widget Tests
 
 #### Feature-Level MVVM Unit Test (`features/home/test/viewmodel/counter_view_model_test.dart`):
 ```dart
@@ -351,6 +378,6 @@ Verify the project status across all packages:
 
 ## References
 
-- [Package-Based Feature Guide (MVVM)](./references/feature_first_guide.md): Details on feature packaging and MVVM separation of concerns.
+- [Package-Based Feature Guide (MVVM)](./references/feature_first_guide.md): Details on feature packaging, modular `router.config.dart`, and localization.
 - [Riverpod MVVM Best Practices](./references/riverpod_best_practices.md): Idiomatic patterns for ViewModels, State classes, and test overrides.
-- [Automated Scaffolding Script](./scripts/scaffold_starter.sh): One-click starter project generator with package-based MVVM.
+- [Automated Scaffolding Script](./scripts/scaffold_starter.sh): One-click starter project generator with package-based MVVM, l10n, and router configs.
