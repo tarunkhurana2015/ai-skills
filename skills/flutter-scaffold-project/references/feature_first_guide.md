@@ -21,6 +21,11 @@ my_flutter_app/
 └── features/                        # Package-based feature modules
     ├── home/                        # Feature Package (home_feature)
     │   ├── pubspec.yaml             # Isolated dependencies for home feature
+    │   ├── docs/                    # Package-level documentation & API specs
+    │   │   └── README.md
+    │   ├── test/                    # Isolated package test suite
+    │   │   └── viewmodel/           # ViewModel unit tests
+    │   │       └── counter_view_model_test.dart
     │   └── lib/
     │       ├── home_feature.dart    # Barrel export file
     │       ├── domain/              # Model: business rules, entities
@@ -39,6 +44,11 @@ my_flutter_app/
     │
     └── settings/                    # Feature Package (settings_feature)
         ├── pubspec.yaml
+        ├── docs/                    # Package-level documentation & API specs
+        │   └── README.md
+        ├── test/                    # Isolated package test suite
+        │   └── viewmodel/
+        │       └── theme_view_model_test.dart
         └── lib/
             ├── settings_feature.dart
             └── presentation/        # MVVM Presentation Layer

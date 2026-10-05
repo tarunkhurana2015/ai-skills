@@ -42,7 +42,7 @@ This skill provides step-by-step procedures and automated scripts for scaffoldin
 Use this checklist during scaffolding:
 
 - [ ] Run `flutter create` for the host app targeting specified platforms.
-- [ ] Scaffold `features/<feature>/` as independent packages with their own `pubspec.yaml`.
+- [ ] Scaffold `features/<feature>/` as independent packages with their own `pubspec.yaml`, `docs/`, and `test/` directories.
 - [ ] Implement MVVM in each feature: `presentation/state/`, `presentation/viewmodel/`, and `presentation/views/`.
 - [ ] Export public feature interfaces via `lib/<feature_name>.dart` barrel files.
 - [ ] Add feature packages as local path dependencies in host app `pubspec.yaml`.
@@ -50,7 +50,7 @@ Use this checklist during scaffolding:
 - [ ] Configure `GoRouter` referencing feature views.
 - [ ] Wire `main.dart` with `ProviderScope` and `MaterialApp.router`.
 - [ ] Enable macOS network client entitlement in `macos/Runner/*.entitlements`.
-- [ ] Implement feature-level unit tests and host-level widget tests.
+- [ ] Implement feature-level unit tests (`features/<feature>/test/`) and host-level widget tests (`test/`).
 - [ ] Validate codebase with `flutter analyze` and `flutter test`.
 
 ---
@@ -81,13 +81,13 @@ cd my_app
 *(If using FVM: `fvm flutter create ...`)*
 
 ### 2. Scaffold Package-Based Features (MVVM)
-Create feature package structures:
+Create feature package structures including package-level `docs/` and `test/` directories:
 ```bash
-mkdir -p features/home/{lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{lib/presentation/{views,viewmodel,state},test}
+mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state},test/viewmodel}
 ```
 
-#### Feature `pubspec.yaml` (`features/home/pubspec.yaml`):
+#### A. Feature `pubspec.yaml` (`features/home/pubspec.yaml`):
 ```yaml
 name: home_feature
 description: Home feature package
@@ -108,6 +108,19 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+```
+
+#### B. Package Documentation (`features/home/docs/README.md`):
+```markdown
+# Home Feature Package (`home_feature`)
+
+## Overview
+Self-contained feature package managing counter domain logic and landing experience following MVVM.
+
+## Architecture
+- State: `lib/presentation/state/counter_state.dart`
+- ViewModel: `lib/presentation/viewmodel/counter_view_model.dart`
+- Views: `lib/presentation/views/home_view.dart`
 ```
 
 ### 3. Implement MVVM Layers in Features

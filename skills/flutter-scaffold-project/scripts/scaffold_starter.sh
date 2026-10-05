@@ -106,8 +106,8 @@ if [[ "$PLATFORMS" == *"macos"* ]] && [ -d "macos" ]; then
 fi
 
 echo "==> Scaffolding package-based features with MVVM..."
-mkdir -p features/home/{lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{lib/presentation/{views,viewmodel,state},test}
+mkdir -p features/home/{docs,lib/presentation/{views/widgets,viewmodel,state},lib/domain,lib/data,test/viewmodel}
+mkdir -p features/settings/{docs,lib/presentation/{views,viewmodel,state},test/viewmodel}
 
 # -----------------------------------------------------------------------------
 # 1. Feature Package: home_feature
@@ -134,6 +134,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
+EOF
+
+# features/home/docs/README.md
+cat << 'EOF' > features/home/docs/README.md
+# Home Feature Package (`home_feature`)
+
+## Overview
+Self-contained feature package managing the counter domain and landing experience following the Model-View-ViewModel (MVVM) architecture.
+
+## Architecture
+- **State**: `lib/presentation/state/counter_state.dart`
+- **ViewModel**: `lib/presentation/viewmodel/counter_view_model.dart`
+- **Views**: `lib/presentation/views/home_view.dart`
+
+## Public API
+Exports public components via `lib/home_feature.dart`.
 EOF
 
 # features/home/lib/home_feature.dart (Barrel file)
@@ -326,6 +342,22 @@ dev_dependencies:
   flutter_lints: ^5.0.0
 EOF
 
+# features/settings/docs/README.md
+cat << 'EOF' > features/settings/docs/README.md
+# Settings Feature Package (`settings_feature`)
+
+## Overview
+Self-contained feature package handling application-wide settings and Material 3 theme modes following the Model-View-ViewModel (MVVM) architecture.
+
+## Architecture
+- **State**: `lib/presentation/state/theme_state.dart`
+- **ViewModel**: `lib/presentation/viewmodel/theme_view_model.dart`
+- **Views**: `lib/presentation/views/settings_view.dart`
+
+## Public API
+Exports public components via `lib/settings_feature.dart`.
+EOF
+
 # features/settings/lib/settings_feature.dart (Barrel file)
 cat << 'EOF' > features/settings/lib/settings_feature.dart
 export 'presentation/state/theme_state.dart';
@@ -429,6 +461,33 @@ class SettingsView extends ConsumerWidget {
       ),
     );
   }
+}
+EOF
+
+# features/settings/test/viewmodel/theme_view_model_test.dart
+cat << 'EOF' > features/settings/test/viewmodel/theme_view_model_test.dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:settings_feature/settings_feature.dart';
+
+void main() {
+  group('ThemeViewModel (MVVM Unit Test)', () {
+    test('initial state mode is system', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(container.read(themeViewModelProvider).mode, ThemeMode.system);
+    });
+
+    test('setThemeMode updates state properly', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(themeViewModelProvider.notifier).setThemeMode(ThemeMode.dark);
+      expect(container.read(themeViewModelProvider).mode, ThemeMode.dark);
+    });
+  });
 }
 EOF
 
@@ -594,6 +653,7 @@ fi
 
 echo "==> Running static analysis & tests across feature packages and host app..."
 (cd features/home && $FLUTTER_CMD test)
+(cd features/settings && $FLUTTER_CMD test)
 $FLUTTER_CMD analyze
 $FLUTTER_CMD test
 
