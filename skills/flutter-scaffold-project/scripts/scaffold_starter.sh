@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
-# Flutter Package-Based Feature-First Starter Scaffolding Script (MVVM)
-# Creates a production-ready Flutter app with:
-# - Package-based features with MVVM (views, viewmodel, state, router)
-# - Package-level router.config.dart for modular routing
+# Flutter Monorepo Workspace Scaffolding Script (apps/ and packages/ MVVM)
+# Creates a production-ready Flutter monorepo workspace with:
+# - apps/: Executable application shells with platform runners (iOS, macOS, Web)
+# - packages/: Modular feature packages with MVVM (views, viewmodel, state, router.config)
+# - Package-level router.config.dart for modular GoRouter navigation
+# - Package-level l10n localization (.arb translation files and generated classes)
 # - Package-level docs/ and test/ directories
-# - Full l10n localization support (.arb and AppLocalizations)
-# - Riverpod state management and Material 3 theming
+# - Riverpod reactive state management and Material 3 theming
 
 set -euo pipefail
 
-APP_NAME="starter_app"
+WORKSPACE_NAME="my_workspace"
+APP_NAME="app"
 ORG="com.example"
 PLATFORMS="ios,macos,web"
 TARGET_DIR=""
@@ -18,7 +20,8 @@ USE_FVM=false
 print_usage() {
   echo "Usage: $0 [options]"
   echo "Options:"
-  echo "  -n, --name <app_name>        Application name (snake_case, default: starter_app)"
+  echo "  -n, --name <workspace_name>  Workspace directory name (default: my_workspace)"
+  echo "  -a, --app <app_name>         Executable application name inside apps/ (default: app)"
   echo "  -o, --org <org_domain>       Organization reverse domain (default: com.example)"
   echo "  -p, --platforms <list>       Comma-separated platforms (default: ios,macos,web)"
   echo "  -d, --dir <path>             Target parent directory (default: current directory)"
@@ -29,6 +32,10 @@ print_usage() {
 while [[ $# -gt 0 ]]; do
   case $1 in
     -n|--name)
+      WORKSPACE_NAME="$2"
+      shift 2
+      ;;
+    -a|--app)
       APP_NAME="$2"
       shift 2
       ;;
@@ -74,52 +81,36 @@ if [ -n "$TARGET_DIR" ]; then
   cd "$TARGET_DIR"
 fi
 
-echo "==> Creating host Flutter app: $APP_NAME ($ORG) for [$PLATFORMS]..."
-$FLUTTER_CMD create --org "$ORG" --platforms="$PLATFORMS" --project-name "$APP_NAME" "$APP_NAME"
+echo "==> Creating workspace directory: $WORKSPACE_NAME with apps/ and packages/..."
+mkdir -p "$WORKSPACE_NAME"/{apps,packages}
+cd "$WORKSPACE_NAME"
 
-cd "$APP_NAME"
+# Workspace README
+cat << EOF > README.md
+# $WORKSPACE_NAME
 
-# Setup FVM if requested
-if [ "$USE_FVM" = true ] && command -v fvm >/dev/null 2>&1; then
-  echo "==> Initializing FVM configuration..."
-  fvm use stable --force
-  mkdir -p .vscode
-  cat << 'EOF' > .vscode/settings.json
-{
-  "dart.flutterSdkPath": ".fvm/flutter_sdk",
-  "search.exclude": {
-    "**/.fvm": true
-  },
-  "files.watcherExclude": {
-    "**/.fvm": true
-  }
-}
+Production-ready Flutter Monorepo Workspace featuring:
+- \`apps/$APP_NAME\`: Executable application shell targeting \`$PLATFORMS\`
+- \`packages/home_feature\`: Modular counter domain package with MVVM, router.config, and l10n
+- \`packages/settings_feature\`: Modular theme preference package with MVVM, router.config, and l10n
+
+## Getting Started
+\`\`\`bash
+cd apps/$APP_NAME
+$FLUTTER_CMD run -d chrome
+$FLUTTER_CMD run -d macos
+\`\`\`
 EOF
-fi
-
-# Configure macOS Network Entitlements
-if [[ "$PLATFORMS" == *"macos"* ]] && [ -d "macos" ]; then
-  echo "==> Enabling macOS client network entitlements..."
-  for ENTITLEMENT in macos/Runner/DebugProfile.entitlements macos/Runner/Release.entitlements; do
-    if [ -f "$ENTITLEMENT" ] && ! grep -q "com.apple.security.network.client" "$ENTITLEMENT"; then
-      sed -i '' -e '/<\/dict>/i\
-	<key>com.apple.security.network.client<\/key>\
-	<true\/>
-' "$ENTITLEMENT" || true
-    fi
-  done
-fi
-
-echo "==> Scaffolding package-based features with MVVM, router.config, docs, and tests..."
-mkdir -p features/home/{docs,lib/l10n,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
-mkdir -p features/settings/{docs,lib/l10n,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
 
 # -----------------------------------------------------------------------------
-# 1. Feature Package: home_feature
+# 1. Feature Package: packages/home_feature
 # -----------------------------------------------------------------------------
 
-# features/home/pubspec.yaml
-cat << 'EOF' > features/home/pubspec.yaml
+echo "==> Scaffolding packages/home_feature..."
+mkdir -p packages/home_feature/{docs,lib/l10n,lib/presentation/{views/widgets,viewmodel,state,router},lib/domain,lib/data,test/viewmodel}
+
+# packages/home_feature/pubspec.yaml
+cat << 'EOF' > packages/home_feature/pubspec.yaml
 name: home_feature
 description: Home feature package
 version: 1.0.0
@@ -147,8 +138,8 @@ flutter:
   generate: true
 EOF
 
-# features/home/l10n.yaml
-cat << 'EOF' > features/home/l10n.yaml
+# packages/home_feature/l10n.yaml
+cat << 'EOF' > packages/home_feature/l10n.yaml
 arb-dir: lib/l10n
 template-arb-file: home_en.arb
 output-localization-file: home_localizations.dart
@@ -156,8 +147,8 @@ output-class: HomeLocalizations
 output-dir: lib/l10n
 EOF
 
-# features/home/lib/l10n/home_en.arb
-cat << 'EOF' > features/home/lib/l10n/home_en.arb
+# packages/home_feature/lib/l10n/home_en.arb
+cat << 'EOF' > packages/home_feature/lib/l10n/home_en.arb
 {
   "@@locale": "en",
   "homeTitle": "Home",
@@ -168,8 +159,8 @@ cat << 'EOF' > features/home/lib/l10n/home_en.arb
 }
 EOF
 
-# features/home/lib/l10n/home_es.arb
-cat << 'EOF' > features/home/lib/l10n/home_es.arb
+# packages/home_feature/lib/l10n/home_es.arb
+cat << 'EOF' > packages/home_feature/lib/l10n/home_es.arb
 {
   "@@locale": "es",
   "homeTitle": "Inicio",
@@ -180,8 +171,8 @@ cat << 'EOF' > features/home/lib/l10n/home_es.arb
 }
 EOF
 
-# features/home/docs/README.md
-cat << 'EOF' > features/home/docs/README.md
+# packages/home_feature/docs/README.md
+cat << 'EOF' > packages/home_feature/docs/README.md
 # Home Feature Package (`home_feature`)
 
 ## Overview
@@ -198,8 +189,8 @@ Self-contained feature package managing the counter domain, landing experience, 
 Exports public components via `lib/home_feature.dart`.
 EOF
 
-# features/home/lib/presentation/router/router.config.dart
-cat << 'EOF' > features/home/lib/presentation/router/router.config.dart
+# packages/home_feature/lib/presentation/router/router.config.dart
+cat << 'EOF' > packages/home_feature/lib/presentation/router/router.config.dart
 import 'package:go_router/go_router.dart';
 import '../views/home_view.dart';
 
@@ -215,8 +206,8 @@ class HomeRouterConfig {
 }
 EOF
 
-# features/home/lib/home_feature.dart (Barrel file)
-cat << 'EOF' > features/home/lib/home_feature.dart
+# packages/home_feature/lib/home_feature.dart (Barrel file)
+cat << 'EOF' > packages/home_feature/lib/home_feature.dart
 export 'l10n/home_localizations.dart';
 export 'presentation/router/router.config.dart';
 export 'presentation/state/counter_state.dart';
@@ -224,8 +215,8 @@ export 'presentation/viewmodel/counter_view_model.dart';
 export 'presentation/views/home_view.dart';
 EOF
 
-# features/home/lib/presentation/state/counter_state.dart
-cat << 'EOF' > features/home/lib/presentation/state/counter_state.dart
+# packages/home_feature/lib/presentation/state/counter_state.dart
+cat << 'EOF' > packages/home_feature/lib/presentation/state/counter_state.dart
 class CounterState {
   final int count;
 
@@ -237,8 +228,8 @@ class CounterState {
 }
 EOF
 
-# features/home/lib/presentation/viewmodel/counter_view_model.dart
-cat << 'EOF' > features/home/lib/presentation/viewmodel/counter_view_model.dart
+# packages/home_feature/lib/presentation/viewmodel/counter_view_model.dart
+cat << 'EOF' > packages/home_feature/lib/presentation/viewmodel/counter_view_model.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/counter_state.dart';
 
@@ -265,8 +256,8 @@ final counterViewModelProvider =
 );
 EOF
 
-# features/home/lib/presentation/views/home_view.dart
-cat << 'EOF' > features/home/lib/presentation/views/home_view.dart
+# packages/home_feature/lib/presentation/views/home_view.dart
+cat << 'EOF' > packages/home_feature/lib/presentation/views/home_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -340,8 +331,8 @@ class HomeView extends ConsumerWidget {
 }
 EOF
 
-# features/home/test/viewmodel/counter_view_model_test.dart
-cat << 'EOF' > features/home/test/viewmodel/counter_view_model_test.dart
+# packages/home_feature/test/viewmodel/counter_view_model_test.dart
+cat << 'EOF' > packages/home_feature/test/viewmodel/counter_view_model_test.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:home_feature/home_feature.dart';
@@ -384,11 +375,14 @@ void main() {
 EOF
 
 # -----------------------------------------------------------------------------
-# 2. Feature Package: settings_feature
+# 2. Feature Package: packages/settings_feature
 # -----------------------------------------------------------------------------
 
-# features/settings/pubspec.yaml
-cat << 'EOF' > features/settings/pubspec.yaml
+echo "==> Scaffolding packages/settings_feature..."
+mkdir -p packages/settings_feature/{docs,lib/l10n,lib/presentation/{views,viewmodel,state,router},test/viewmodel}
+
+# packages/settings_feature/pubspec.yaml
+cat << 'EOF' > packages/settings_feature/pubspec.yaml
 name: settings_feature
 description: Settings feature package
 version: 1.0.0
@@ -416,8 +410,8 @@ flutter:
   generate: true
 EOF
 
-# features/settings/l10n.yaml
-cat << 'EOF' > features/settings/l10n.yaml
+# packages/settings_feature/l10n.yaml
+cat << 'EOF' > packages/settings_feature/l10n.yaml
 arb-dir: lib/l10n
 template-arb-file: settings_en.arb
 output-localization-file: settings_localizations.dart
@@ -425,8 +419,8 @@ output-class: SettingsLocalizations
 output-dir: lib/l10n
 EOF
 
-# features/settings/lib/l10n/settings_en.arb
-cat << 'EOF' > features/settings/lib/l10n/settings_en.arb
+# packages/settings_feature/lib/l10n/settings_en.arb
+cat << 'EOF' > packages/settings_feature/lib/l10n/settings_en.arb
 {
   "@@locale": "en",
   "settingsTitle": "Settings",
@@ -437,8 +431,8 @@ cat << 'EOF' > features/settings/lib/l10n/settings_en.arb
 }
 EOF
 
-# features/settings/lib/l10n/settings_es.arb
-cat << 'EOF' > features/settings/lib/l10n/settings_es.arb
+# packages/settings_feature/lib/l10n/settings_es.arb
+cat << 'EOF' > packages/settings_feature/lib/l10n/settings_es.arb
 {
   "@@locale": "es",
   "settingsTitle": "Ajustes",
@@ -449,8 +443,8 @@ cat << 'EOF' > features/settings/lib/l10n/settings_es.arb
 }
 EOF
 
-# features/settings/docs/README.md
-cat << 'EOF' > features/settings/docs/README.md
+# packages/settings_feature/docs/README.md
+cat << 'EOF' > packages/settings_feature/docs/README.md
 # Settings Feature Package (`settings_feature`)
 
 ## Overview
@@ -467,8 +461,8 @@ Self-contained feature package handling application-wide settings, Material 3 th
 Exports public components via `lib/settings_feature.dart`.
 EOF
 
-# features/settings/lib/presentation/router/router.config.dart
-cat << 'EOF' > features/settings/lib/presentation/router/router.config.dart
+# packages/settings_feature/lib/presentation/router/router.config.dart
+cat << 'EOF' > packages/settings_feature/lib/presentation/router/router.config.dart
 import 'package:go_router/go_router.dart';
 import '../views/settings_view.dart';
 
@@ -484,8 +478,8 @@ class SettingsRouterConfig {
 }
 EOF
 
-# features/settings/lib/settings_feature.dart (Barrel file)
-cat << 'EOF' > features/settings/lib/settings_feature.dart
+# packages/settings_feature/lib/settings_feature.dart (Barrel file)
+cat << 'EOF' > packages/settings_feature/lib/settings_feature.dart
 export 'l10n/settings_localizations.dart';
 export 'presentation/router/router.config.dart';
 export 'presentation/state/theme_state.dart';
@@ -493,8 +487,8 @@ export 'presentation/viewmodel/theme_view_model.dart';
 export 'presentation/views/settings_view.dart';
 EOF
 
-# features/settings/lib/presentation/state/theme_state.dart
-cat << 'EOF' > features/settings/lib/presentation/state/theme_state.dart
+# packages/settings_feature/lib/presentation/state/theme_state.dart
+cat << 'EOF' > packages/settings_feature/lib/presentation/state/theme_state.dart
 import 'package:flutter/material.dart';
 
 class ThemeState {
@@ -508,8 +502,8 @@ class ThemeState {
 }
 EOF
 
-# features/settings/lib/presentation/viewmodel/theme_view_model.dart
-cat << 'EOF' > features/settings/lib/presentation/viewmodel/theme_view_model.dart
+# packages/settings_feature/lib/presentation/viewmodel/theme_view_model.dart
+cat << 'EOF' > packages/settings_feature/lib/presentation/viewmodel/theme_view_model.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/theme_state.dart';
@@ -534,8 +528,8 @@ final themeViewModelProvider =
 );
 EOF
 
-# features/settings/lib/presentation/views/settings_view.dart
-cat << 'EOF' > features/settings/lib/presentation/views/settings_view.dart
+# packages/settings_feature/lib/presentation/views/settings_view.dart
+cat << 'EOF' > packages/settings_feature/lib/presentation/views/settings_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/settings_localizations.dart';
@@ -594,8 +588,8 @@ class SettingsView extends ConsumerWidget {
 }
 EOF
 
-# features/settings/test/viewmodel/theme_view_model_test.dart
-cat << 'EOF' > features/settings/test/viewmodel/theme_view_model_test.dart
+# packages/settings_feature/test/viewmodel/theme_view_model_test.dart
+cat << 'EOF' > packages/settings_feature/test/viewmodel/theme_view_model_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -622,14 +616,50 @@ void main() {
 EOF
 
 # -----------------------------------------------------------------------------
-# 3. Host Application Setup & Wiring (Package Localizations, Router, MVVM)
+# 3. Executable Host Application: apps/$APP_NAME
 # -----------------------------------------------------------------------------
 
-echo "==> Wiring host app dependencies, l10n, and local path packages..."
+echo "==> Creating host Flutter app: apps/$APP_NAME ($ORG) for [$PLATFORMS]..."
+(cd apps && $FLUTTER_CMD create --org "$ORG" --platforms="$PLATFORMS" --project-name "$APP_NAME" "$APP_NAME")
+
+cd "apps/$APP_NAME"
+
+# Setup FVM if requested
+if [ "$USE_FVM" = true ] && command -v fvm >/dev/null 2>&1; then
+  echo "==> Initializing FVM configuration..."
+  fvm use stable --force
+  mkdir -p .vscode
+  cat << 'EOF' > .vscode/settings.json
+{
+  "dart.flutterSdkPath": ".fvm/flutter_sdk",
+  "search.exclude": {
+    "**/.fvm": true
+  },
+  "files.watcherExclude": {
+    "**/.fvm": true
+  }
+}
+EOF
+fi
+
+# Configure macOS Network Entitlements
+if [[ "$PLATFORMS" == *"macos"* ]] && [ -d "macos" ]; then
+  echo "==> Enabling macOS client network entitlements..."
+  for ENTITLEMENT in macos/Runner/DebugProfile.entitlements macos/Runner/Release.entitlements; do
+    if [ -f "$ENTITLEMENT" ] && ! grep -q "com.apple.security.network.client" "$ENTITLEMENT"; then
+      sed -i '' -e '/<\/dict>/i\
+	<key>com.apple.security.network.client<\/key>\
+	<true\/>
+' "$ENTITLEMENT" || true
+    fi
+  done
+fi
+
+echo "==> Wiring host app dependencies, l10n, and local monorepo packages..."
 $FLUTTER_CMD pub add flutter_riverpod go_router
 $FLUTTER_CMD pub add flutter_localizations --sdk=flutter
 $FLUTTER_CMD pub add intl:any
-$FLUTTER_CMD pub add 'home_feature:{"path":"features/home"}' 'settings_feature:{"path":"features/settings"}'
+$FLUTTER_CMD pub add 'home_feature:{"path":"../../packages/home_feature"}' 'settings_feature:{"path":"../../packages/settings_feature"}'
 
 # Configure l10n generation in pubspec.yaml
 if ! grep -q "generate: true" pubspec.yaml; then
@@ -664,8 +694,8 @@ cat << 'EOF' > lib/l10n/app_es.arb
 EOF
 
 echo "==> Resolving packages and generating package & root localizations..."
-(cd features/home && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
-(cd features/settings && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
+(cd ../../packages/home_feature && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
+(cd ../../packages/settings_feature && $FLUTTER_CMD pub get && $FLUTTER_CMD gen-l10n)
 $FLUTTER_CMD pub get
 $FLUTTER_CMD gen-l10n
 
@@ -788,7 +818,7 @@ cat << 'EOF' > test/widget_test.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:starter_app/app.dart';
+import 'package:app/app.dart';
 
 void main() {
   testWidgets('App renders Home view and responds to ViewModel actions', (WidgetTester tester) async {
@@ -812,25 +842,27 @@ void main() {
 }
 EOF
 
-if [ "$APP_NAME" != "starter_app" ]; then
-  sed -i '' "s/starter_app/$APP_NAME/g" test/widget_test.dart || true
+if [ "$APP_NAME" != "app" ]; then
+  sed -i '' "s/package:app/package:$APP_NAME/g" test/widget_test.dart || true
 fi
 
 echo "==> Running static analysis & tests across feature packages and host app..."
-(cd features/home && $FLUTTER_CMD test)
-(cd features/settings && $FLUTTER_CMD test)
+(cd ../../packages/home_feature && $FLUTTER_CMD test)
+(cd ../../packages/settings_feature && $FLUTTER_CMD test)
 $FLUTTER_CMD analyze
 $FLUTTER_CMD test
 
 echo ""
-echo "==> Success! Scaffolding completed for $APP_NAME."
+echo "==> Success! Monorepo workspace completed for $WORKSPACE_NAME."
 echo "Architecture highlights:"
-echo "  - Package-based features with MVVM: views, viewmodel, state, router.config"
+echo "  - apps/$APP_NAME: Executable Flutter application for [$PLATFORMS]"
+echo "  - packages/: Reusable feature modules with MVVM, router.config, and l10n"
 echo "  - Package-level docs/ and test/ directories"
-echo "  - Modular routing: feature packages define their own router.config.dart"
-echo "  - Official l10n localization support configured with AppLocalizations"
+echo "  - Modular routing: features define their own router.config.dart"
+echo "  - Package-level l10n localization aggregated in apps/$APP_NAME"
 echo ""
 echo "To run your app:"
-echo "  cd $APP_NAME"
+echo "  cd $WORKSPACE_NAME/apps/$APP_NAME"
 echo "  $FLUTTER_CMD run -d chrome"
 echo "  $FLUTTER_CMD run -d macos"
+echo "  $FLUTTER_CMD run -d ios"

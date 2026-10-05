@@ -1,44 +1,54 @@
-# Package-Based Feature-First Architecture Guide (MVVM)
+# Monorepo Workspace Guide: Apps & Packages Architecture (MVVM)
 
-In a **Package-Based Feature-First** architecture, features are encapsulated as independent, self-contained Flutter packages inside the `features/` directory. Each feature package contains its own `pubspec.yaml`, dependencies, isolated test suites, package-level documentation, route definitions (`router.config.dart`), and **package-level localization (`l10n.yaml` and `.arb` translation files)**, while adhering to the **Model-View-ViewModel (MVVM)** pattern within its presentation layer.
+In the **Monorepo / Workspace Architecture**, code is partitioned into two distinct top-level directories:
+1. **`apps/`**: Contains executable application shells that house the native platform runners (**iOS**, **macOS**, **Web**), app lifecycle management, and the root `main.dart` entrypoint.
+2. **`packages/`**: Contains reusable, modular Dart/Flutter library packages. Feature packages live here (e.g. `packages/home_feature/`, `packages/settings_feature/`), each having its own `pubspec.yaml`, package-level **`router.config.dart`**, package-level **localization (`l10n.yaml`)**, documentation, tests, and **Model-View-ViewModel (MVVM)** presentation layer.
 
 ---
 
 ## Directory Layout
 
 ```text
-my_flutter_app/
-├── pubspec.yaml                     # App root dependencies & local path packages
-├── l10n.yaml                        # Root localization configuration (global app strings)
+my_workspace/
+├── pubspec.yaml                     # Root workspace pubspec
+├── README.md                        # Workspace documentation & quickstart
 │
-├── ios/                             # Native iOS runner (Xcode workspace, Runner, Podfile)
-├── macos/                           # Native macOS runner (Xcode workspace, entitlements, AppKit shell)
-├── web/                             # Native Web runner (index.html, manifest.json, favicon)
+├── apps/                            # Executable platform application shells
+│   └── app/                         # Primary host application (or client_app)
+│       ├── pubspec.yaml             # Links to packages via path: ../../packages/*
+│       ├── l10n.yaml                # Host root localization config
+│       │
+│       ├── ios/                     # Native iOS Xcode workspace & runner
+│       ├── macos/                   # Native macOS desktop runner & entitlements
+│       ├── web/                     # Native Web host (index.html, manifest.json)
+│       │
+│       ├── test/                    # Host integration & widget tests
+│       │   └── widget_test.dart
+│       │
+│       └── lib/                     # Host application code
+│           ├── main.dart            # App entrypoint (runApp with ProviderScope)
+│           ├── app.dart             # MaterialApp.router with combined localizationsDelegates
+│           ├── l10n/                # Host shell localization (.arb files & generated code)
+│           │   ├── app_en.arb
+│           │   ├── app_es.arb
+│           │   └── app_localizations.dart
+│           └── core/                # Core routing, themes, constants
+│               ├── constants/
+│               │   └── app_constants.dart
+│               ├── router/          # GoRouter mounting package router.config routes
+│               │   └── app_router.dart
+│               ├── theme/           # Material 3 light/dark themes
+│               │   └── app_theme.dart
+│               └── utils/
 │
-├── lib/                             # Host app Dart code
-│   ├── main.dart                    # App entry point, ProviderScope initialization
-│   ├── app.dart                     # MaterialApp.router aggregating feature localizationsDelegates
-│   ├── l10n/                        # Global/shell localization resource files (.arb)
-│   │   ├── app_en.arb               # Root English translations
-│   │   ├── app_es.arb               # Root Spanish translations
-│   │   └── app_localizations.dart   # Generated root localization delegates
-│   └── core/                        # Global foundational code shared by the host app
-│       ├── constants/               # Global strings, asset definitions
-│       ├── router/                  # Central GoRouter mounting feature router.config routes
-│       ├── theme/                   # Material 3 light/dark themes & design tokens
-│       └── utils/                   # Shared utilities & extensions
-│
-├── test/                            # Host app widget and integration tests
-│   └── widget_test.dart
-│
-└── features/                        # Package-based feature modules (Pure Dart/Flutter packages)
-    ├── home/                        # Feature Package (home_feature)
+└── packages/                        # Pure Dart/Flutter reusable modules
+    ├── home_feature/                # Home feature module (MVVM)
     │   ├── pubspec.yaml             # Isolated dependencies: flutter_localizations, generate: true
-    │   ├── l10n.yaml                # Package-level l10n config (output-class: HomeLocalizations)
+    │   ├── l10n.yaml                # Package l10n config (output-class: HomeLocalizations)
     │   ├── docs/                    # Package-level documentation & API specs
     │   │   └── README.md
     │   ├── test/                    # Isolated package test suite
-    │   │   └── viewmodel/           # ViewModel unit tests
+    │   │   └── viewmodel/
     │   │       └── counter_view_model_test.dart
     │   └── lib/
     │       ├── home_feature.dart    # Barrel export (exports l10n, router, state, viewmodel, views)
@@ -46,11 +56,8 @@ my_flutter_app/
     │       │   ├── home_en.arb      # Home English translations
     │       │   ├── home_es.arb      # Home Spanish translations
     │       │   └── home_localizations.dart
-    │       ├── domain/              # Model: business rules, entities
-    │       │   └── home_item.dart
-    │       ├── data/                # Model: repositories, data sources
-    │       │   ├── home_repository.dart
-    │       │   └── home_api_client.dart
+    │       ├── domain/              # Business entities & interfaces
+    │       ├── data/                # Data sources & repositories
     │       └── presentation/        # MVVM Presentation Layer
     │           ├── router/          # Package Route Configuration
     │           │   └── router.config.dart # GoRouter RouteBase definition
@@ -62,9 +69,9 @@ my_flutter_app/
     │               ├── home_view.dart
     │               └── widgets/
     │
-    └── settings/                    # Feature Package (settings_feature)
+    └── settings_feature/            # Settings feature module (MVVM)
         ├── pubspec.yaml             # Isolated dependencies: flutter_localizations, generate: true
-        ├── l10n.yaml                # Package-level l10n config (output-class: SettingsLocalizations)
+        ├── l10n.yaml                # Package l10n config (output-class: SettingsLocalizations)
         ├── docs/                    # Package-level documentation & API specs
         │   └── README.md
         ├── test/                    # Isolated package test suite
@@ -89,31 +96,55 @@ my_flutter_app/
 
 ---
 
-## Host Application vs. Feature Packages
+## Architectural Separation: `apps/` vs. `packages/`
 
-### 1. Where do the native platform runners live?
-The native platform projects are created at the **root level of the host application**:
-- **`ios/`**: The native iOS Xcode project (`Runner.xcworkspace`, `Podfile`, `Info.plist`).
-- **`macos/`**: The native macOS desktop project (`Runner.xcworkspace`, `AppKit` runner, macOS network entitlements).
-- **`web/`**: The web platform host (`index.html`, `manifest.json`, web icons, and Wasm/JS bootstrap).
+| Dimension | `apps/<app_name>/` | `packages/<package_name>/` |
+|---|---|---|
+| **Role** | Executable Application Shell | Reusable Library Module |
+| **Native Runners** | Contains `ios/`, `macos/`, and `web/` projects | Pure Dart/Flutter (No platform folders) |
+| **Entry Point** | Contains `lib/main.dart` with `runApp()` | Barrel file `lib/<package_name>.dart` |
+| **Routing** | Mounts feature `router.config.dart` routes | Declares internal routes in `router.config.dart` |
+| **Localization** | Aggregates all package delegates in `MaterialApp` | Encapsulates its own `.arb` and `*Localizations` |
+| **Execution** | `flutter run -d chrome` from inside `apps/<app>` | Tested independently: `flutter test` |
 
-When you run `flutter run -d chrome`, `flutter run -d macos`, or `flutter run -d ios`, the Flutter CLI executes from the **root directory (`my_flutter_app/`)**, invoking the corresponding native platform runner and bootstrapping `lib/main.dart`.
+---
 
-### 2. Why don't feature packages have native platform folders?
-Feature packages in `features/` (e.g. `home_feature`, `settings_feature`) are created as **modular library packages**. They contain pure Flutter/Dart code:
-- Presentation (views, viewmodels, state models, route configs)
-- Domain and data logic (entities, repositories)
-- Translations (`.arb` files and generated localizations)
+## Wiring Packages to Apps (`apps/app/pubspec.yaml`)
 
-Because they are library packages, they remain 100% portable and platform-agnostic. The root host app imports them as local dependencies (`path: features/home`) and compiles them into whatever native platform runner (`ios`, `macos`, or `web`) is being targeted.
+The host application links to feature packages via relative path dependencies:
+
+```yaml
+name: app
+description: Main executable application shell
+version: 1.0.0
+publish_to: 'none'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+  flutter_riverpod: ^3.3.2
+  go_router: ^17.5.0
+
+  # Local Monorepo Packages
+  home_feature:
+    path: ../../packages/home_feature
+  settings_feature:
+    path: ../../packages/settings_feature
+
+flutter:
+  generate: true
+```
 
 ---
 
 ## Modular Package Routing with `router.config.dart`
 
-To avoid a bloated central router where the host app hardcodes all routes, each feature package declares its own route tree in a dedicated `router.config.dart` file:
+Each feature package declares its own route tree in a dedicated `router.config.dart` file:
 
-### `features/home/lib/presentation/router/router.config.dart`
+### `packages/home_feature/lib/presentation/router/router.config.dart`
 ```dart
 import 'package:go_router/go_router.dart';
 import '../views/home_view.dart';
@@ -130,7 +161,7 @@ class HomeRouterConfig {
 }
 ```
 
-### Central Mounting in the Host App (`lib/core/router/app_router.dart`)
+### Central Mounting in the Host App (`apps/app/lib/core/router/app_router.dart`)
 The host app simply imports the package's barrel file and mounts the feature's `RouteBase`:
 
 ```dart
@@ -158,25 +189,9 @@ final routerProvider = Provider<GoRouter>((ref) {
 
 ## Package-Level Localization with `l10n`
 
-Defining localization at the feature package level ensures that each module is fully self-contained, portable, and independently testable without depending on host application strings.
+Each feature package compiles and encapsulates its own localized messages.
 
-### 1. Feature Package Configuration (`features/home/`)
-
-#### A. Enable Code Generation in `features/home/pubspec.yaml`
-```yaml
-dependencies:
-  flutter:
-    sdk: flutter
-  flutter_localizations:
-    sdk: flutter
-  intl: any
-
-flutter:
-  generate: true
-```
-
-#### B. Configure Package `l10n.yaml` (`features/home/l10n.yaml`)
-Specify a custom `output-class` and set `output-dir` directly inside the package:
+### 1. Feature Package Configuration (`packages/home_feature/l10n.yaml`)
 ```yaml
 arb-dir: lib/l10n
 template-arb-file: home_en.arb
@@ -185,7 +200,7 @@ output-class: HomeLocalizations
 output-dir: lib/l10n
 ```
 
-#### C. Feature Translation Files (`features/home/lib/l10n/`)
+### 2. Feature Translation Files (`packages/home_feature/lib/l10n/`)
 - `home_en.arb`:
   ```json
   {
@@ -209,40 +224,31 @@ output-dir: lib/l10n
   }
   ```
 
-#### D. Export from Package Barrel (`features/home/lib/home_feature.dart`)
+### 3. Consuming in Feature Views (`packages/home_feature/lib/presentation/views/home_view.dart`)
 ```dart
-export 'l10n/home_localizations.dart';
-export 'presentation/router/router.config.dart';
-export 'presentation/state/counter_state.dart';
-export 'presentation/viewmodel/counter_view_model.dart';
-export 'presentation/views/home_view.dart';
-```
-
-#### E. Consuming in Feature Views (`features/home/lib/presentation/views/home_view.dart`)
-The view directly consumes its own package localization class:
-```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../l10n/home_localizations.dart';
 
-Widget build(BuildContext context, WidgetRef ref) {
-  final l10n = HomeLocalizations.of(context);
+class HomeView extends ConsumerWidget {
+  const HomeView({super.key});
 
-  return Scaffold(
-    appBar: AppBar(
-      title: Text(l10n?.homeTitle ?? 'Home'),
-    ),
-    body: Text(l10n?.counterLabel ?? 'Current Counter Value:'),
-  );
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = HomeLocalizations.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n?.homeTitle ?? 'Home'),
+      ),
+      body: Text(l10n?.counterLabel ?? 'Current Counter Value:'),
+    );
+  }
 }
 ```
 
----
-
-### 2. Aggregating Localizations in the Host Application
-
-The host app imports feature packages and includes each feature's `delegate` in the `localizationsDelegates` list:
-
+### 4. Aggregating Localizations in the Host App (`apps/app/lib/app.dart`)
 ```dart
-// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:home_feature/home_feature.dart';
@@ -291,9 +297,9 @@ Within each feature package's `presentation/` folder, code is strictly divided i
 
 ---
 
-## Benefits of Package-Level Architecture
+## Benefits of the Monorepo Structure
 
-1. **Autonomous Ownership**: Each feature package owns its UI markup, business logic, routes, and translations.
-2. **Eliminates Merge Conflicts**: Multiple teams can add or modify localized strings without conflicting in a single giant root ARB file.
-3. **Clean Decoupling**: Deleting or replacing a feature completely purges its routes and localization resources cleanly.
-4. **Independent Testing**: Feature packages can be tested in isolation (`cd features/home && flutter test`).
+1. **Clean Root Directory**: No clutter of platform folders mixed with root-level scripts or repository tools.
+2. **Multi-App Ready**: Easily add additional applications (e.g. `apps/admin_portal/`, `apps/companion_app/`) that share the exact same packages in `packages/`.
+3. **Autonomous Team Ownership**: Separate teams can work in `packages/home_feature` without risking changes to the host application shells or native runner configurations.
+4. **Fast, Isolated CI/CD**: Run unit tests on single packages in milliseconds (`cd packages/home_feature && flutter test`) without compiling the entire host application.
