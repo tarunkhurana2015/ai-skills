@@ -48,6 +48,7 @@ Within each feature package in `packages/<name>/lib/presentation/`:
 | **State Management** | `flutter_riverpod: ^3.3.2` | Compile-time safety, auto-disposal, easily mockable in tests |
 | **Routing** | `go_router: ^17.5.0` | Declarative, deep linking, path-based URL navigation |
 | **Localization** | `flutter_localizations` & `intl` | Official Flutter l10n standard with `.arb` code generation |
+| **Domain Models & Code Gen** | `freezed_annotation: ^2.4.4`, `json_annotation: ^4.9.0`<br/>Dev: `build_runner: ^2.4.15`, `freezed: ^2.5.8`, `json_serializable: ^6.9.4` | Immutable Freezed domain models with copyWith, structural equality, and JSON serialization |
 | **Local Persistence** | [e.g. `shared_preferences` / `drift` / `hive`] | [Rationale for storage selection] |
 | **HTTP / Networking** | [e.g. `http` / `dio`] | REST API integration with interceptors and retry policies |
 | **Testing** | `flutter_test`, `flutter_riverpod` | Unit, widget, and integration testing capabilities |
@@ -64,4 +65,5 @@ Within each feature package in `packages/<name>/lib/presentation/`:
 ## 5. State Management & Lifecycle Guidelines
 - **No Global Mutables**: All state must be encapsulated within Riverpod Notifiers.
 - **State Immutability**: All State classes must be `@immutable` with `copyWith` methods.
+- **Freezed Domain Models**: All domain entities in `packages/*/lib/domain/` must be defined using Freezed (`@freezed`) with generated `copyWith`, value equality, and `fromJson`/`toJson` methods. Plain mutable Dart classes for domain entities are strictly prohibited.
 - **Side Effects**: Asynchronous network calls or persistence operations must be handled within ViewModels, never directly in widget `build()` methods.

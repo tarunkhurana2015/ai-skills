@@ -10,6 +10,8 @@
 
 ### Phase 2: Feature Packages & Contracts Scaffolding
 - [ ] Scaffold `packages/[feature_1]_feature/` with `pubspec.yaml`, `l10n.yaml`, `docs/`, `test/`.
+- [ ] Define domain entities as Freezed models (`@freezed`).
+- [ ] Run code generation (`dart run build_runner build --delete-conflicting-outputs`) for `*.freezed.dart` and `*.g.dart`.
 - [ ] Define immutable UI State classes with `copyWith`.
 - [ ] Implement abstract domain repository interfaces.
 - [ ] Write unit tests for ViewModels verifying initial states.
@@ -32,8 +34,9 @@
 ## 2. Definition of Done (DoD)
 A feature or task is only considered **Done** when all of the following criteria are met:
 1. **Spec Alignment**: Implementation matches Gherkin scenarios in `02_user_journeys_and_features.md`.
-2. **Localization**: All visible text strings are localized in `.arb` files; no hardcoded strings.
-3. **Responsive**: UI adapts smoothly across compact, medium, and expanded breakpoints.
-4. **Tested**: Unit test passes for ViewModel logic; widget test verifies key user flow.
-5. **Clean Analysis**: `flutter analyze` reports 0 issues.
-6. **No Breaking Changes**: All existing tests in `packages/` and `apps/` continue to pass.
+2. **Freezed Domain Models**: Domain entities are implemented as Freezed models (`@freezed`) with clean, generated `*.freezed.dart` and `*.g.dart` files.
+3. **Localization**: All visible text strings are localized in `.arb` files; no hardcoded strings.
+4. **Responsive**: UI adapts smoothly across compact, medium, and expanded breakpoints.
+5. **Tested**: Unit test passes for ViewModel logic; widget test verifies key user flow.
+6. **Clean Analysis**: `flutter analyze` reports 0 issues.
+7. **No Breaking Changes**: All existing tests in `packages/` and `apps/` continue to pass.

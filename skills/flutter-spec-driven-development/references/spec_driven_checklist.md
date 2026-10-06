@@ -31,7 +31,7 @@ Before writing any code or executing scaffolding, the team must review and sign 
 ## 3. Architecture & Monorepo Spec (`03_architecture_and_monorepo.md`)
 - [ ] Monorepo structure (`apps/` vs `packages/`) is clearly mapped out.
 - [ ] Each feature package adheres to MVVM (`router/`, `state/`, `viewmodel/`, `views/`).
-- [ ] Dependency versions are pinned (e.g. `flutter_riverpod: ^3.3.2`, `go_router: ^17.5.0`).
+- [ ] Dependency versions are pinned (e.g. `flutter_riverpod: ^3.3.2`, `go_router: ^17.5.0`, `freezed_annotation: ^2.4.4`).
 - [ ] Modular routing strategy with `router.config.dart` is documented.
 
 ---
@@ -44,7 +44,8 @@ Before writing any code or executing scaffolding, the team must review and sign 
 ---
 
 ## 5. API & Data Contracts (`05_api_and_data_contracts.md`)
-- [ ] Domain entity models are typed with non-null defaults or safe fallbacks.
+- [ ] Domain entity models are defined as Freezed models (`@freezed`) with `fromJson`/`toJson` factory constructors and `copyWith`.
+- [ ] Code generation dependencies (`freezed_annotation`, `json_annotation`, `build_runner`, `freezed`, `json_serializable`) and build commands are specified.
 - [ ] Request and response JSON payloads are fully documented.
 - [ ] Error response formats (4xx, 5xx) are specified.
 - [ ] Abstract repository interfaces decouple business logic from networking.

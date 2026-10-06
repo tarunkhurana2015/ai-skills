@@ -11,7 +11,7 @@ In **Spec-Driven Development (SDD)**, specifications are not an afterthought or 
 | **Environment Readiness** | Discovers missing SDKs/Xcode during compile errors | Pre-flight verified upfront via `flutter-environment-setup` |
 | **Starting Point** | Writing Dart widgets and views immediately | Defining product scope, user journeys & Gherkin specs |
 | **Architectural Decisions** | Ad-hoc, refactored repeatedly as issues arise | Explicitly decided upfront (monorepo, MVVM, routing) |
-| **API & Data Modeling** | Dictated by UI widgets as screens are built | Formalized in typed data contracts & repository interfaces |
+| **API & Data Modeling** | Dictated by UI widgets as screens are built | Formalized in typed Freezed domain models (`@freezed`) & repository interfaces |
 | **Testing** | Written after implementation (often skipped) | Acceptance criteria mapped 1:1 to test suites before coding |
 | **AI Pair Programming** | Model hallucinates scope, loses context, rewrites code | Model constrained by strictly gated stages and verified specs |
 | **Code Scaffolding** | Single ad-hoc app shell | Standardized monorepo (`apps/` + `packages/`) via `flutter-scaffold-project` |
@@ -51,7 +51,7 @@ graph TD
 ### Gate 3: Architecture & Monorepo Spec (`03_architecture_and_monorepo.md`)
 - Establishes the Monorepo structure (`apps/` for shells, `packages/` for features).
 - Enforces MVVM in presentation (`router/`, `state/`, `viewmodel/`, `views/`).
-- Fixes dependencies (`flutter_riverpod`, `go_router`, `flutter_localizations`).
+- Fixes dependencies (`flutter_riverpod`, `go_router`, `flutter_localizations`, `freezed_annotation`).
 
 ### Gate 4: Design System & Responsive Spec (`04_design_system_and_responsive.md`)
 - Defines Material 3 color seeds, typography, and dark/light tokens.
@@ -59,8 +59,9 @@ graph TD
 - Specifies layout adaptation (BottomNav vs NavigationRail vs NavigationDrawer).
 
 ### Gate 5: Data Models & API Contracts (`05_api_and_data_contracts.md`)
-- Freezes domain entity definitions and DTO schemas.
+- Specifies domain entities as immutable Freezed models (`@freezed`) with `fromJson`/`toJson` code generation.
 - Defines JSON structures with concrete sample payloads.
+- Configures code generation (`dart run build_runner build --delete-conflicting-outputs`).
 - Formalizes abstract repository interfaces in `lib/domain/`.
 
 ### Gate 6: Testing Strategy Spec (`06_testing_strategy.md`)

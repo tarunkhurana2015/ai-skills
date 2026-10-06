@@ -19,13 +19,18 @@ ai-skills/
 │   │   └── references/
 │   │       ├── platform_troubleshooting.md   # Android, iOS, macOS, Web troubleshooting
 │   │       └── fvm_guide.md                  # Flutter Version Management (FVM) setup
-│   └── flutter-scaffold-project/             # Feature-First Riverpod starter skill
-│       ├── SKILL.md                          # Main scaffolding workflows
-│       ├── scripts/
-│       │   └── scaffold_starter.sh           # Automated starter project generator
-│       └── references/
-│           ├── feature_first_guide.md        # Architecture layout and layer guide
-│           └── riverpod_best_practices.md    # Riverpod state & test patterns
+│   ├── flutter-scaffold-project/             # Feature-First Riverpod starter skill
+│   │   ├── SKILL.md                          # Main scaffolding workflows
+│   │   ├── scripts/
+│   │   │   └── scaffold_starter.sh           # Automated starter project generator
+│   │   └── references/
+│   │       ├── feature_first_guide.md        # Architecture layout and layer guide
+│   │       └── riverpod_best_practices.md    # Riverpod state & test patterns
+│   └── flutter-spec-driven-development/      # Gated Spec-Driven Development (SDD) lifecycle
+│       ├── SKILL.md                          # SDD workflow, gated interview protocol
+│       ├── templates/                        # 7-stage specification templates (Freezed models)
+│       ├── scripts/                          # init_specs.sh and validate_specs.sh
+│       └── references/                       # SDD guide, Gherkin guide, checklist
 └── README.md
 ```
 
@@ -35,6 +40,7 @@ ai-skills/
 | :--- | :--- | :--- |
 | [`flutter-environment-setup`](./skills/flutter-environment-setup/SKILL.md) | Validate, configure, and troubleshoot the Flutter development environment for Mobile (iOS, Android), macOS Desktop, and Web. Supports both standard Flutter CLI and FVM. | iOS, Android, macOS, Web |
 | [`flutter-scaffold-project`](./skills/flutter-scaffold-project/SKILL.md) | Scaffold a production-ready Flutter starter project using Feature-First architecture, Riverpod, GoRouter, and Material 3. Includes automated generator script. | iOS, macOS, Web, Android |
+| [`flutter-spec-driven-development`](./skills/flutter-spec-driven-development/SKILL.md) | Guide and execute Spec-Driven Development (SDD) across 7 gated stages with Freezed domain models, Gherkin criteria, and automated monorepo handoff. | iOS, macOS, Web, Android |
 
 ## Quick Start
 

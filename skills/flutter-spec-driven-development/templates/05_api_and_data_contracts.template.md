@@ -4,13 +4,24 @@
 
 ### Entity: [Entity Name, e.g. UserProfile]
 - **Location**: `packages/[feature_name]_feature/lib/domain/[entity_name].dart`
-- **Fields**:
+- **Fields & Freezed Definition**:
   ```dart
-  class UserProfile {
-    final String id;
-    final String email;
-    final String displayName;
-    final DateTime createdAt;
+  import 'package:freezed_annotation/freezed_annotation.dart';
+
+  part '[entity_name].freezed.dart';
+  part '[entity_name].g.dart';
+
+  @freezed
+  class [EntityName] with _$[EntityName] {
+    const factory [EntityName]({
+      required String id,
+      required String email,
+      required String displayName,
+      required DateTime createdAt,
+    }) = _[EntityName];
+
+    factory [EntityName].fromJson(Map<String, dynamic> json) =>
+        _$[EntityName]FromJson(json);
   }
   ```
 
@@ -58,13 +69,31 @@
 
 ---
 
-## 3. Serialization Strategy
-- Models must provide explicit `fromJson(Map<String, dynamic> json)` and `toJson()` methods.
-- Type casting must include safe fallbacks:
-  ```dart
-  id: json['id'] as String? ?? '',
-  createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ?? DateTime.now(),
-  ```
+## 3. Freezed Serialization & Code Generation Strategy
+- All domain models and business entities must be defined using **Freezed** (`@freezed`) to ensure:
+  - **Compile-time Immutability**: Domain models are immutable value objects.
+  - **Structural Equality**: Auto-generated `==` operator and `hashCode` overrides.
+  - **Copying**: Auto-generated `copyWith` methods for safe updates.
+  - **Type-safe JSON**: Seamless integration with `json_serializable` for `fromJson` and `toJson`.
+  - **Pattern Matching**: Sealed union support when modeling variant domain states.
+
+### Required Dependencies (`pubspec.yaml`):
+```yaml
+dependencies:
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  build_runner: ^2.4.15
+  freezed: ^2.5.8
+  json_serializable: ^6.9.4
+```
+
+### Code Generation Workflow:
+Execute the code generator to produce `*.freezed.dart` and `*.g.dart`:
+```bash
+dart run build_runner build --delete-conflicting-outputs
+```
 
 ---
 

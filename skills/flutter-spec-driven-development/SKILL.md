@@ -81,7 +81,7 @@ Specs reside in `specs/` as markdown documents that serve as the project's execu
 | **2** | `specs/02_user_journeys_and_features.md` | User stories, Gherkin acceptance criteria (`Given/When/Then`), edge cases |
 | **3** | `specs/03_architecture_and_monorepo.md` | Workspace layout (`apps/` vs `packages/`), MVVM, Riverpod, GoRouter |
 | **4** | `specs/04_design_system_and_responsive.md` | Material 3 tokens, dark/light palettes, typography, responsive breakpoints |
-| **5** | `specs/05_api_and_data_contracts.md` | Entities, DTOs, request/response JSON schemas, repository interfaces |
+| **5** | `specs/05_api_and_data_contracts.md` | Freezed domain entities, DTOs, request/response JSON schemas, repository interfaces |
 | **6** | `specs/06_testing_strategy.md` | Testing pyramid, Gherkin-to-test mapping, mocking rules, CI quality gates |
 | **7** | `specs/07_implementation_plan.md` | Phased development milestones, Definition of Done (DoD) |
 
@@ -158,9 +158,10 @@ sequenceDiagram
 3. What routing strategy is required (`go_router` with package-level `router.config.dart` export)?
 4. What local persistence mechanism is preferred (e.g. `shared_preferences`, `drift`, `hive`, or in-memory)?
 5. What networking / HTTP library is required (e.g. `http`, `dio`, or mock client)?
+6. What code generation dependencies are required for Freezed domain models (`freezed_annotation`, `json_annotation`, `build_runner`, `freezed`, `json_serializable`)?
 
 #### Exit Criteria for Gate 3:
-- `specs/03_architecture_and_monorepo.md` maps monorepo package boundaries and pinned dependencies.
+- `specs/03_architecture_and_monorepo.md` maps monorepo package boundaries and pinned dependencies (including Freezed and code generation).
 - Confirms MVVM presentation architecture with Riverpod and GoRouter.
 - Developer explicitly confirms: *"Stage 3 approved"*.
 
@@ -184,15 +185,16 @@ sequenceDiagram
 ### Gate 5: Data Models & API Contracts (`specs/05_api_and_data_contracts.md`)
 
 #### Discovery Questions to Ask Developer:
-1. What are the primary domain entities and their typed fields (e.g. `HoldingPosition`, `UserProfile`)?
+1. What are the primary domain entities and their typed fields (e.g. `HoldingPosition`, `UserProfile`)? *(All domain models must be defined as Freezed models using `@freezed` with `_$EntityName`, immutability, `copyWith`, and `fromJson`/`toJson` factory constructors)*
 2. What are the API endpoints, HTTP methods, and required headers?
 3. Is a mock/fake server engine required initially before integrating live third-party APIs?
 4. What do realistic JSON 200 OK success payloads look like?
 5. What is the standardized error response contract (error code, message, timestamp)?
 6. What abstract repository interfaces (`lib/domain/`) are needed to decouple UI from networking?
+7. What code generation command (`dart run build_runner build --delete-conflicting-outputs`) will generate the `*.freezed.dart` and `*.g.dart` implementations?
 
 #### Exit Criteria for Gate 5:
-- `specs/05_api_and_data_contracts.md` specifies typed Dart models, sample JSON payloads, and repository interfaces.
+- `specs/05_api_and_data_contracts.md` specifies typed Freezed models (`@freezed`), sample JSON payloads, serialization strategy, code generation commands, and repository interfaces.
 - Developer explicitly confirms: *"Stage 5 approved"*.
 
 ---
@@ -267,6 +269,7 @@ The audit checks:
 4. **Package Localization**: Each package contains its own `l10n.yaml` and `.arb` translation files.
 5. **Entitlements**: Host application runners configure native platform requirements (e.g. macOS network client sandbox entitlement).
 6. **Isolated Tests**: Feature-level unit tests in `packages/*/test/` and host integration tests in `apps/app/test/`.
+7. **Freezed Domain Models**: Domain entities in `packages/<feature>_feature/lib/domain/` are implemented as immutable Freezed models (`@freezed`) with `part '<entity>.freezed.dart';` and `part '<entity>.g.dart';`, generated via `build_runner`.
 
 ---
 
