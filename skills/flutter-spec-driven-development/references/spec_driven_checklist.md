@@ -4,6 +4,14 @@ Before writing any code or executing scaffolding, the team must review and sign 
 
 ---
 
+## 0. Prerequisite Environment Readiness (`flutter-environment-setup`)
+- [ ] `./skills/flutter-environment-setup/scripts/verify_environment.sh` ran with zero blocking failures.
+- [ ] `flutter doctor -v` reports clean status for all prioritized target platforms.
+- [ ] Target devices/emulators verified (`flutter devices`).
+- [ ] Target platform configs enabled (`enable-web`, `enable-macos-desktop`).
+
+---
+
 ## 1. Scope & Product Spec (`01_product_scope.md`)
 - [ ] App vision, value proposition, and personas are explicitly defined.
 - [ ] Target platform matrix is prioritized (iOS, macOS Desktop, Web, Android).
@@ -53,3 +61,11 @@ Before writing any code or executing scaffolding, the team must review and sign 
 ## 7. Phased Implementation Plan (`07_implementation_plan.md`)
 - [ ] Development is broken down into sequential, verifiable milestones.
 - [ ] Definition of Done (DoD) is agreed upon.
+
+---
+
+## 8. Scaffolding Execution Hand-off (`flutter-scaffold-project`)
+- [ ] Specs validated cleanly with `validate_specs.sh`.
+- [ ] Workspace scaffolded via `./skills/flutter-scaffold-project/scripts/scaffold_starter.sh`.
+- [ ] Platform entitlements configured (e.g. macOS network client).
+- [ ] Baseline test suites passing across all packages and host application.
